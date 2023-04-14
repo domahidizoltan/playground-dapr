@@ -1,0 +1,6 @@
+version: '3'
+services:
+  redis-commander:
+    image: rediscommander/redis-commander:redis-commander-210
+    container_name: redis-commander
+    network_mode: host    
