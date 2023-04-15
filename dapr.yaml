@@ -1,0 +1,16 @@
+version: 1
+common:
+  resourcesPath: ./components
+  # env:
+  #   DEBUG: true
+apps:
+  - appID: gateway
+    appDirPath: ./
+    appPort: 3000
+    daprHTTPPort: 8000
+    command: ["go","run", "gateway/main.go", "gateway/transfersvc.go"]
+  - appID: transaction
+    appDirPath: .
+    appPort: 3001
+    daprHTTPPort: 8001
+    command: ["go","run", "transaction/main.go"]
