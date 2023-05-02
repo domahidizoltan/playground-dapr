@@ -8,7 +8,7 @@ import (
 	"regexp"
 
 	"github.com/dapr/go-sdk/client"
-	"github.com/domahidizoltan/playground-dapr/model"
+	"github.com/domahidizoltan/playground-dapr/common/model"
 	"github.com/google/uuid"
 )
 
