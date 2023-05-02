@@ -43,8 +43,10 @@ func GetQueryParam(r *http.Request, key string) (string, error) {
 	return value, nil
 }
 
-func HttpError(w http.ResponseWriter, status int, messageFormat string, err error) {
-	log.Printf(messageFormat, err)
+func HttpError(w http.ResponseWriter, status int, message string, err error) {
+	log.Printf(message+": %s", err)
 	w.WriteHeader(status)
-	w.Write([]byte(err.Error()))
+	if _, err := w.Write([]byte(err.Error())); err != nil {
+		log.Printf("failed to write response body: %s", err)
+	}
 }

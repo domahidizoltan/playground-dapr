@@ -24,7 +24,7 @@ func initTransferHandler(w http.ResponseWriter, r *http.Request) {
 	for _, key := range []string{srcAccQuery, dstAccQuery, amountQuery} {
 		value, err := helper.GetQueryParam(r, key)
 		if err != nil {
-			helper.HttpError(w, http.StatusBadRequest, "failed to get query param: %s", err)
+			helper.HttpError(w, http.StatusBadRequest, "failed to get query param", err)
 			return
 		}
 		params[key] = value
@@ -32,11 +32,11 @@ func initTransferHandler(w http.ResponseWriter, r *http.Request) {
 
 	amount, err := strconv.ParseFloat(params[amountQuery], 32)
 	if err != nil {
-		helper.HttpError(w, http.StatusBadRequest, "failed to parse amount: %s", err)
+		helper.HttpError(w, http.StatusBadRequest, "failed to parse amount", err)
 		return
 	}
 	if err := transferSvc.InitTransfer(context.Background(), params[srcAccQuery], params[dstAccQuery], float32(amount)); err != nil {
-		helper.HttpError(w, http.StatusInternalServerError, "failed to init transfer: %s", err)
+		helper.HttpError(w, http.StatusInternalServerError, "failed to init transfer", err)
 		return
 	}
 

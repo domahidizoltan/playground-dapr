@@ -1,3 +1,4 @@
+#https://docs.dapr.io/developing-applications/local-development/multi-app-dapr-run/multi-app-template/
 version: 1
 common:
   resourcesPath: ./components
@@ -9,6 +10,15 @@ apps:
     appPort: 3000
     daprHTTPPort: 8000
     command: ["go","run", "gateway/main.go", "gateway/transfersvc.go"]
+    env:
+      GATEWAY_PORT: 3000
+  - appID: balance
+    appDirPath: ./
+    appPort: 3002
+    daprHTTPPort: 8002
+    command: ["go","run", "balanceservice/main.go"]
+    env:
+      BALANCE_PORT: 3002
   - appID: transaction
     appDirPath: .
     appPort: 3001
