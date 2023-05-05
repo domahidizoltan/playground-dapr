@@ -20,6 +20,7 @@ delete-logs:
 
 generate:
 	go run -mod=mod entgo.io/ent/cmd/ent generate --target ./balanceservice/ent/generated  ./balanceservice/ent/schema
+	go run -mod=mod entgo.io/ent/cmd/ent generate --target ./transactionservice/ent/generated  ./transactionservice/ent/schema
 
 seed-local: dbDriver=sqlite3
 seed-local: dbDataSource=file:localdev/sqlitedata/main.db

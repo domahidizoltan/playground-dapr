@@ -25,6 +25,6 @@ services:
     command: >
       schema apply
       --url "sqlite://db/main.db" 
-      --to "file://schema/balance.hcl" 
+      --to "file://schema/main.hcl" 
       --dev-url "sqlite://file?mode=memory"
       --auto-approve

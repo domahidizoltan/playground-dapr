@@ -3,14 +3,14 @@ package client
 import (
 	"log"
 
-	ent "github.com/domahidizoltan/playground-dapr/balanceservice/ent/generated"
 	"github.com/domahidizoltan/playground-dapr/common/helper"
+	ent "github.com/domahidizoltan/playground-dapr/transactionservice/ent/generated"
 
 	_ "github.com/mattn/go-sqlite3"
 )
 
 const (
-	envPrefix       = "BALANCE"
+	envPrefix       = "TRANSACTION"
 	dbDriverKey     = envPrefix + "_DB_DRIVER"
 	dbDataSourceKey = envPrefix + "_DB_DATASOURCE"
 )
