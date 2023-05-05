@@ -34,9 +34,38 @@ func (bu *BalanceUpdate) SetBalance(f float64) *BalanceUpdate {
 	return bu
 }
 
+// SetNillableBalance sets the "balance" field if the given value is not nil.
+func (bu *BalanceUpdate) SetNillableBalance(f *float64) *BalanceUpdate {
+	if f != nil {
+		bu.SetBalance(*f)
+	}
+	return bu
+}
+
 // AddBalance adds f to the "balance" field.
 func (bu *BalanceUpdate) AddBalance(f float64) *BalanceUpdate {
 	bu.mutation.AddBalance(f)
+	return bu
+}
+
+// SetPending sets the "pending" field.
+func (bu *BalanceUpdate) SetPending(f float64) *BalanceUpdate {
+	bu.mutation.ResetPending()
+	bu.mutation.SetPending(f)
+	return bu
+}
+
+// SetNillablePending sets the "pending" field if the given value is not nil.
+func (bu *BalanceUpdate) SetNillablePending(f *float64) *BalanceUpdate {
+	if f != nil {
+		bu.SetPending(*f)
+	}
+	return bu
+}
+
+// AddPending adds f to the "pending" field.
+func (bu *BalanceUpdate) AddPending(f float64) *BalanceUpdate {
+	bu.mutation.AddPending(f)
 	return bu
 }
 
@@ -79,6 +108,11 @@ func (bu *BalanceUpdate) check() error {
 			return &ValidationError{Name: "balance", err: fmt.Errorf(`generated: validator failed for field "Balance.balance": %w`, err)}
 		}
 	}
+	if v, ok := bu.mutation.Pending(); ok {
+		if err := balance.PendingValidator(v); err != nil {
+			return &ValidationError{Name: "pending", err: fmt.Errorf(`generated: validator failed for field "Balance.pending": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -99,6 +133,12 @@ func (bu *BalanceUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if value, ok := bu.mutation.AddedBalance(); ok {
 		_spec.AddField(balance.FieldBalance, field.TypeFloat64, value)
+	}
+	if value, ok := bu.mutation.Pending(); ok {
+		_spec.SetField(balance.FieldPending, field.TypeFloat64, value)
+	}
+	if value, ok := bu.mutation.AddedPending(); ok {
+		_spec.AddField(balance.FieldPending, field.TypeFloat64, value)
 	}
 	if n, err = sqlgraph.UpdateNodes(ctx, bu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -127,9 +167,38 @@ func (buo *BalanceUpdateOne) SetBalance(f float64) *BalanceUpdateOne {
 	return buo
 }
 
+// SetNillableBalance sets the "balance" field if the given value is not nil.
+func (buo *BalanceUpdateOne) SetNillableBalance(f *float64) *BalanceUpdateOne {
+	if f != nil {
+		buo.SetBalance(*f)
+	}
+	return buo
+}
+
 // AddBalance adds f to the "balance" field.
 func (buo *BalanceUpdateOne) AddBalance(f float64) *BalanceUpdateOne {
 	buo.mutation.AddBalance(f)
+	return buo
+}
+
+// SetPending sets the "pending" field.
+func (buo *BalanceUpdateOne) SetPending(f float64) *BalanceUpdateOne {
+	buo.mutation.ResetPending()
+	buo.mutation.SetPending(f)
+	return buo
+}
+
+// SetNillablePending sets the "pending" field if the given value is not nil.
+func (buo *BalanceUpdateOne) SetNillablePending(f *float64) *BalanceUpdateOne {
+	if f != nil {
+		buo.SetPending(*f)
+	}
+	return buo
+}
+
+// AddPending adds f to the "pending" field.
+func (buo *BalanceUpdateOne) AddPending(f float64) *BalanceUpdateOne {
+	buo.mutation.AddPending(f)
 	return buo
 }
 
@@ -185,6 +254,11 @@ func (buo *BalanceUpdateOne) check() error {
 			return &ValidationError{Name: "balance", err: fmt.Errorf(`generated: validator failed for field "Balance.balance": %w`, err)}
 		}
 	}
+	if v, ok := buo.mutation.Pending(); ok {
+		if err := balance.PendingValidator(v); err != nil {
+			return &ValidationError{Name: "pending", err: fmt.Errorf(`generated: validator failed for field "Balance.pending": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -222,6 +296,12 @@ func (buo *BalanceUpdateOne) sqlSave(ctx context.Context) (_node *Balance, err e
 	}
 	if value, ok := buo.mutation.AddedBalance(); ok {
 		_spec.AddField(balance.FieldBalance, field.TypeFloat64, value)
+	}
+	if value, ok := buo.mutation.Pending(); ok {
+		_spec.SetField(balance.FieldPending, field.TypeFloat64, value)
+	}
+	if value, ok := buo.mutation.AddedPending(); ok {
+		_spec.AddField(balance.FieldPending, field.TypeFloat64, value)
 	}
 	_node = &Balance{config: buo.config}
 	_spec.Assign = _node.assignValues

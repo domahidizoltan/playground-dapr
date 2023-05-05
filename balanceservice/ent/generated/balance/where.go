@@ -67,6 +67,11 @@ func Balance(v float64) predicate.Balance {
 	return predicate.Balance(sql.FieldEQ(FieldBalance, v))
 }
 
+// Pending applies equality check predicate on the "pending" field. It's identical to PendingEQ.
+func Pending(v float64) predicate.Balance {
+	return predicate.Balance(sql.FieldEQ(FieldPending, v))
+}
+
 // BalanceEQ applies the EQ predicate on the "balance" field.
 func BalanceEQ(v float64) predicate.Balance {
 	return predicate.Balance(sql.FieldEQ(FieldBalance, v))
@@ -105,6 +110,46 @@ func BalanceLT(v float64) predicate.Balance {
 // BalanceLTE applies the LTE predicate on the "balance" field.
 func BalanceLTE(v float64) predicate.Balance {
 	return predicate.Balance(sql.FieldLTE(FieldBalance, v))
+}
+
+// PendingEQ applies the EQ predicate on the "pending" field.
+func PendingEQ(v float64) predicate.Balance {
+	return predicate.Balance(sql.FieldEQ(FieldPending, v))
+}
+
+// PendingNEQ applies the NEQ predicate on the "pending" field.
+func PendingNEQ(v float64) predicate.Balance {
+	return predicate.Balance(sql.FieldNEQ(FieldPending, v))
+}
+
+// PendingIn applies the In predicate on the "pending" field.
+func PendingIn(vs ...float64) predicate.Balance {
+	return predicate.Balance(sql.FieldIn(FieldPending, vs...))
+}
+
+// PendingNotIn applies the NotIn predicate on the "pending" field.
+func PendingNotIn(vs ...float64) predicate.Balance {
+	return predicate.Balance(sql.FieldNotIn(FieldPending, vs...))
+}
+
+// PendingGT applies the GT predicate on the "pending" field.
+func PendingGT(v float64) predicate.Balance {
+	return predicate.Balance(sql.FieldGT(FieldPending, v))
+}
+
+// PendingGTE applies the GTE predicate on the "pending" field.
+func PendingGTE(v float64) predicate.Balance {
+	return predicate.Balance(sql.FieldGTE(FieldPending, v))
+}
+
+// PendingLT applies the LT predicate on the "pending" field.
+func PendingLT(v float64) predicate.Balance {
+	return predicate.Balance(sql.FieldLT(FieldPending, v))
+}
+
+// PendingLTE applies the LTE predicate on the "pending" field.
+func PendingLTE(v float64) predicate.Balance {
+	return predicate.Balance(sql.FieldLTE(FieldPending, v))
 }
 
 // And groups predicates with the AND operator between them.

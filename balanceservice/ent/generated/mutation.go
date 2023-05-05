@@ -34,6 +34,8 @@ type BalanceMutation struct {
 	id            *string
 	balance       *float64
 	addbalance    *float64
+	pending       *float64
+	addpending    *float64
 	clearedFields map[string]struct{}
 	done          bool
 	oldValue      func(context.Context) (*Balance, error)
@@ -200,6 +202,62 @@ func (m *BalanceMutation) ResetBalance() {
 	m.addbalance = nil
 }
 
+// SetPending sets the "pending" field.
+func (m *BalanceMutation) SetPending(f float64) {
+	m.pending = &f
+	m.addpending = nil
+}
+
+// Pending returns the value of the "pending" field in the mutation.
+func (m *BalanceMutation) Pending() (r float64, exists bool) {
+	v := m.pending
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPending returns the old "pending" field's value of the Balance entity.
+// If the Balance object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BalanceMutation) OldPending(ctx context.Context) (v float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPending is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPending requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPending: %w", err)
+	}
+	return oldValue.Pending, nil
+}
+
+// AddPending adds f to the "pending" field.
+func (m *BalanceMutation) AddPending(f float64) {
+	if m.addpending != nil {
+		*m.addpending += f
+	} else {
+		m.addpending = &f
+	}
+}
+
+// AddedPending returns the value that was added to the "pending" field in this mutation.
+func (m *BalanceMutation) AddedPending() (r float64, exists bool) {
+	v := m.addpending
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetPending resets all changes to the "pending" field.
+func (m *BalanceMutation) ResetPending() {
+	m.pending = nil
+	m.addpending = nil
+}
+
 // Where appends a list predicates to the BalanceMutation builder.
 func (m *BalanceMutation) Where(ps ...predicate.Balance) {
 	m.predicates = append(m.predicates, ps...)
@@ -234,9 +292,12 @@ func (m *BalanceMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *BalanceMutation) Fields() []string {
-	fields := make([]string, 0, 1)
+	fields := make([]string, 0, 2)
 	if m.balance != nil {
 		fields = append(fields, balance.FieldBalance)
+	}
+	if m.pending != nil {
+		fields = append(fields, balance.FieldPending)
 	}
 	return fields
 }
@@ -248,6 +309,8 @@ func (m *BalanceMutation) Field(name string) (ent.Value, bool) {
 	switch name {
 	case balance.FieldBalance:
 		return m.Balance()
+	case balance.FieldPending:
+		return m.Pending()
 	}
 	return nil, false
 }
@@ -259,6 +322,8 @@ func (m *BalanceMutation) OldField(ctx context.Context, name string) (ent.Value,
 	switch name {
 	case balance.FieldBalance:
 		return m.OldBalance(ctx)
+	case balance.FieldPending:
+		return m.OldPending(ctx)
 	}
 	return nil, fmt.Errorf("unknown Balance field %s", name)
 }
@@ -275,6 +340,13 @@ func (m *BalanceMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetBalance(v)
 		return nil
+	case balance.FieldPending:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPending(v)
+		return nil
 	}
 	return fmt.Errorf("unknown Balance field %s", name)
 }
@@ -286,6 +358,9 @@ func (m *BalanceMutation) AddedFields() []string {
 	if m.addbalance != nil {
 		fields = append(fields, balance.FieldBalance)
 	}
+	if m.addpending != nil {
+		fields = append(fields, balance.FieldPending)
+	}
 	return fields
 }
 
@@ -296,6 +371,8 @@ func (m *BalanceMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
 	case balance.FieldBalance:
 		return m.AddedBalance()
+	case balance.FieldPending:
+		return m.AddedPending()
 	}
 	return nil, false
 }
@@ -311,6 +388,13 @@ func (m *BalanceMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddBalance(v)
+		return nil
+	case balance.FieldPending:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddPending(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Balance numeric field %s", name)
@@ -341,6 +425,9 @@ func (m *BalanceMutation) ResetField(name string) error {
 	switch name {
 	case balance.FieldBalance:
 		m.ResetBalance()
+		return nil
+	case balance.FieldPending:
+		m.ResetPending()
 		return nil
 	}
 	return fmt.Errorf("unknown Balance field %s", name)

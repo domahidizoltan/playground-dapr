@@ -7,8 +7,14 @@ table "balance" {
     type = varchar(6)
   }
   column "balance" {
-    null = true
+    null = false
     type = float
+    default = 0
+  }
+  column "pending" {
+    null = false
+    type = float
+    default = 0
   }
  primary_key {
     columns = [column.id]

@@ -25,6 +25,28 @@ func (bc *BalanceCreate) SetBalance(f float64) *BalanceCreate {
 	return bc
 }
 
+// SetNillableBalance sets the "balance" field if the given value is not nil.
+func (bc *BalanceCreate) SetNillableBalance(f *float64) *BalanceCreate {
+	if f != nil {
+		bc.SetBalance(*f)
+	}
+	return bc
+}
+
+// SetPending sets the "pending" field.
+func (bc *BalanceCreate) SetPending(f float64) *BalanceCreate {
+	bc.mutation.SetPending(f)
+	return bc
+}
+
+// SetNillablePending sets the "pending" field if the given value is not nil.
+func (bc *BalanceCreate) SetNillablePending(f *float64) *BalanceCreate {
+	if f != nil {
+		bc.SetPending(*f)
+	}
+	return bc
+}
+
 // SetID sets the "id" field.
 func (bc *BalanceCreate) SetID(s string) *BalanceCreate {
 	bc.mutation.SetID(s)
@@ -38,6 +60,7 @@ func (bc *BalanceCreate) Mutation() *BalanceMutation {
 
 // Save creates the Balance in the database.
 func (bc *BalanceCreate) Save(ctx context.Context) (*Balance, error) {
+	bc.defaults()
 	return withHooks(ctx, bc.sqlSave, bc.mutation, bc.hooks)
 }
 
@@ -63,6 +86,18 @@ func (bc *BalanceCreate) ExecX(ctx context.Context) {
 	}
 }
 
+// defaults sets the default values of the builder before save.
+func (bc *BalanceCreate) defaults() {
+	if _, ok := bc.mutation.Balance(); !ok {
+		v := balance.DefaultBalance
+		bc.mutation.SetBalance(v)
+	}
+	if _, ok := bc.mutation.Pending(); !ok {
+		v := balance.DefaultPending
+		bc.mutation.SetPending(v)
+	}
+}
+
 // check runs all checks and user-defined validators on the builder.
 func (bc *BalanceCreate) check() error {
 	if _, ok := bc.mutation.Balance(); !ok {
@@ -71,6 +106,14 @@ func (bc *BalanceCreate) check() error {
 	if v, ok := bc.mutation.Balance(); ok {
 		if err := balance.BalanceValidator(v); err != nil {
 			return &ValidationError{Name: "balance", err: fmt.Errorf(`generated: validator failed for field "Balance.balance": %w`, err)}
+		}
+	}
+	if _, ok := bc.mutation.Pending(); !ok {
+		return &ValidationError{Name: "pending", err: errors.New(`generated: missing required field "Balance.pending"`)}
+	}
+	if v, ok := bc.mutation.Pending(); ok {
+		if err := balance.PendingValidator(v); err != nil {
+			return &ValidationError{Name: "pending", err: fmt.Errorf(`generated: validator failed for field "Balance.pending": %w`, err)}
 		}
 	}
 	if v, ok := bc.mutation.ID(); ok {
@@ -117,6 +160,10 @@ func (bc *BalanceCreate) createSpec() (*Balance, *sqlgraph.CreateSpec) {
 		_spec.SetField(balance.FieldBalance, field.TypeFloat64, value)
 		_node.Balance = value
 	}
+	if value, ok := bc.mutation.Pending(); ok {
+		_spec.SetField(balance.FieldPending, field.TypeFloat64, value)
+		_node.Pending = value
+	}
 	return _node, _spec
 }
 
@@ -134,6 +181,7 @@ func (bcb *BalanceCreateBulk) Save(ctx context.Context) ([]*Balance, error) {
 	for i := range bcb.builders {
 		func(i int, root context.Context) {
 			builder := bcb.builders[i]
+			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*BalanceMutation)
 				if !ok {

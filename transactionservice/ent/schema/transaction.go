@@ -25,7 +25,7 @@ func (Transaction) Fields() []ent.Field {
 	}
 }
 
-// Edges of the Balance.
+// Edges of the Transaction.
 func (Transaction) Edges() []ent.Edge {
 	return nil
 }

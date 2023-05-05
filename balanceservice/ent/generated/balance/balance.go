@@ -13,6 +13,8 @@ const (
 	FieldID = "id"
 	// FieldBalance holds the string denoting the balance field in the database.
 	FieldBalance = "balance"
+	// FieldPending holds the string denoting the pending field in the database.
+	FieldPending = "pending"
 	// Table holds the table name of the balance in the database.
 	Table = "balance"
 )
@@ -21,6 +23,7 @@ const (
 var Columns = []string{
 	FieldID,
 	FieldBalance,
+	FieldPending,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -34,8 +37,14 @@ func ValidColumn(column string) bool {
 }
 
 var (
+	// DefaultBalance holds the default value on creation for the "balance" field.
+	DefaultBalance float64
 	// BalanceValidator is a validator for the "balance" field. It is called by the builders before save.
 	BalanceValidator func(float64) error
+	// DefaultPending holds the default value on creation for the "pending" field.
+	DefaultPending float64
+	// PendingValidator is a validator for the "pending" field. It is called by the builders before save.
+	PendingValidator func(float64) error
 	// IDValidator is a validator for the "id" field. It is called by the builders before save.
 	IDValidator func(string) error
 )
@@ -51,4 +60,9 @@ func ByID(opts ...sql.OrderTermOption) OrderOption {
 // ByBalance orders the results by the balance field.
 func ByBalance(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldBalance, opts...).ToFunc()
+}
+
+// ByPending orders the results by the pending field.
+func ByPending(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPending, opts...).ToFunc()
 }
