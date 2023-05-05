@@ -2,18 +2,21 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
+	"entgo.io/ent/dialect/sql"
+	"github.com/domahidizoltan/playground-dapr/balanceservice/client"
+	ent "github.com/domahidizoltan/playground-dapr/balanceservice/ent/generated"
+	"github.com/domahidizoltan/playground-dapr/balanceservice/ent/generated/balance"
 	"github.com/domahidizoltan/playground-dapr/common/helper"
 )
 
-type Balance struct {
-	ID      string  `json:"id"`
-	Balance float32 `json:"balance"`
-}
+var entClient *ent.Client
 
 func listBalances(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
@@ -26,15 +29,19 @@ func listBalances(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response := []Balance{}
-	for i, acc := range r.Form["account"] {
-		response = append(response, Balance{
-			ID:      acc,
-			Balance: float32(i),
-		})
+	accounts := make([]any, len(r.Form["account"]))
+	for _, acc := range r.Form["account"] {
+		accounts = append(accounts, acc)
+	}
+	balances, err := entClient.Balance.Query().Where(func(s *sql.Selector) {
+		s.Where(sql.In(balance.FieldID, accounts...))
+	}).All(r.Context())
+	if err != nil {
+		helper.HttpError(w, http.StatusInternalServerError, "failed to get account balances", err)
+		return
 	}
 
-	resp, err := json.Marshal(response)
+	resp, err := json.Marshal(balances)
 	if err != nil {
 		helper.HttpError(w, http.StatusInternalServerError, "failed to marshall response", err)
 		return
@@ -74,7 +81,7 @@ func updateBalance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var balance *Balance
+	var balance *ent.Balance
 	if err := json.Unmarshal(body, &balance); err != nil {
 		helper.HttpError(w, http.StatusInternalServerError, "failed to parse body", err)
 		return
@@ -84,17 +91,48 @@ func updateBalance(w http.ResponseWriter, r *http.Request) {
 		helper.HttpError(w, http.StatusBadRequest, "id must be the same", nil)
 	}
 
+	if _, err := entClient.Balance.
+		UpdateOneID(balance.ID).
+		SetBalance(balance.Balance).
+		Save(r.Context()); err != nil {
+		helper.HttpError(w, http.StatusInternalServerError, "failed to update balance", err)
+		return
+	}
+
 	log.Printf("updated balance %+v", balance)
 	w.WriteHeader(http.StatusOK)
 }
 
+func router(w http.ResponseWriter, r *http.Request) {
+	switch {
+	case strings.HasPrefix(r.URL.Path, "/balances/"):
+		updateBalance(w, r)
+	case strings.HasPrefix(r.URL.Path, "/balances"):
+		listBalances(w, r)
+	}
+}
+
 func main() {
+	entClient = client.GetEntClient()
+	if entClient == nil {
+		panic(errors.New("failed to create database connection"))
+	}
+
+	address := helper.GetAddress("BALANCE", "3000")
+	srv := &http.Server{
+		Addr:              address,
+		ReadTimeout:       5 * time.Second,
+		WriteTimeout:      2 * time.Second,
+		IdleTimeout:       30 * time.Second,
+		ReadHeaderTimeout: 2 * time.Second,
+		Handler:           http.HandlerFunc(router),
+	}
+
 	http.HandleFunc("/balances/", updateBalance)
 	http.HandleFunc("/balances", listBalances)
 
-	address := helper.GetAddress("BALANCE", "3000")
 	log.Printf("balance service listening on address %s", address)
-	if err := http.ListenAndServe(address, nil); err != nil {
+	if err := srv.ListenAndServe(); err != nil {
 		panic(err)
 	}
 }

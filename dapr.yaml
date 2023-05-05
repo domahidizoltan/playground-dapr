@@ -19,6 +19,8 @@ apps:
     command: ["go","run", "balanceservice/main.go"]
     env:
       BALANCE_PORT: 3002
+      BALANCE_DB_DRIVER: sqlite3
+      BALANCE_DB_DATASOURCE: file:localdev/sqlitedata/main.db
   - appID: transaction
     appDirPath: .
     appPort: 3001

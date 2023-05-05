@@ -17,6 +17,17 @@ install-dapr-cli:
 
 delete-logs:
 	rm -r .dapr/logs
+
+generate:
+	go run -mod=mod entgo.io/ent/cmd/ent generate --target ./balanceservice/ent/generated  ./balanceservice/ent/schema
+
+seed-local: dbDriver=sqlite3
+seed-local: dbDataSource=file:localdev/sqlitedata/main.db
+seed-local: seed
+
+seed:
+	sudo chmod 0666 localdev/sqlitedata/main.db
+	BALANCE_DB_DRIVER=$(dbDriver) BALANCE_DB_DATASOURCE=$(dbDataSource) go run balanceservice/seed/main.go
 	
 # update-dapr-components:
 # 	cp -R components ~/.dapr
