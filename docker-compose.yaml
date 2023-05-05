@@ -4,3 +4,27 @@ services:
     image: rediscommander/redis-commander:redis-commander-210
     container_name: redis-commander
     network_mode: host    
+  
+  adminer:
+    image: adminer:4.8.1
+    container_name: adminer
+    network_mode: host
+    environment:
+      ADMINER_PASSWORD: "pass"
+    volumes:
+      - ./localdev/sqlitedata:/db
+      - ./localdev/plugins-enabled:/var/www/html/plugins-enabled
+  
+  atlas:
+    image: arigaio/atlas:0.10.1-alpine
+    depends_on: [adminer]
+    network_mode: host
+    volumes:
+      - ./schema:/schema
+      - ./localdev/sqlitedata:/db
+    command: >
+      schema apply
+      --url "sqlite://db/main.db" 
+      --to "file://schema/balance.hcl" 
+      --dev-url "sqlite://file?mode=memory"
+      --auto-approve
