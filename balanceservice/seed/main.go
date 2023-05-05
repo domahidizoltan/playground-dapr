@@ -6,8 +6,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/domahidizoltan/playground-dapr/balanceservice/client"
 	ent "github.com/domahidizoltan/playground-dapr/balanceservice/ent/generated"
+	"github.com/domahidizoltan/playground-dapr/common/client"
 	"github.com/domahidizoltan/playground-dapr/common/model"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -19,7 +19,7 @@ const (
 
 func main() {
 	log.Println("start balance seed")
-	client := client.GetEntClient()
+	client := client.GetEntClient("BALANCE")
 	defer client.Close()
 
 	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)

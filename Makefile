@@ -22,13 +22,16 @@ generate:
 	go run -mod=mod entgo.io/ent/cmd/ent generate --target ./balanceservice/ent/generated  ./balanceservice/ent/schema
 	go run -mod=mod entgo.io/ent/cmd/ent generate --target ./transactionservice/ent/generated  ./transactionservice/ent/schema
 
-seed-local: dbDriver=sqlite3
-seed-local: dbDataSource=file:localdev/sqlitedata/main.db
-seed-local: seed
-
+BALANCE_DB_DRIVER=sqlite3
+BALANCE_DB_DATASOURCE=file:localdev/sqlitedata/main.db
 seed:
 	sudo chmod 0666 localdev/sqlitedata/main.db
-	BALANCE_DB_DRIVER=$(dbDriver) BALANCE_DB_DATASOURCE=$(dbDataSource) go run balanceservice/seed/main.go
+	BALANCE_DB_DRIVER=$(BALANCE_DB_DRIVER) BALANCE_DB_DATASOURCE=$(BALANCE_DB_DATASOURCE) go run balanceservice/seed/main.go
 	
 # update-dapr-components:
 # 	cp -R components ~/.dapr
+
+PUB_BALANCE_ADDR=localhost:3001
+publish-update-balance: 
+	curl -X POST http://$(PUB_BALANCE_ADDR)/updatebalance \
+		-d '{"datacontenttype": "application/json", "data": {"account":"$(ACC)","amount":$(AMT)}, "topic": "balance", "pubsubname": "updatebalance"}'

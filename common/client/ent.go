@@ -10,14 +10,13 @@ import (
 )
 
 const (
-	envPrefix       = "BALANCE"
-	dbDriverKey     = envPrefix + "_DB_DRIVER"
-	dbDataSourceKey = envPrefix + "_DB_DATASOURCE"
+	dbDriverKey     = "_DB_DRIVER"
+	dbDataSourceKey = "_DB_DATASOURCE"
 )
 
-func GetEntClient() *ent.Client {
-	dbDriver := helper.GetEnv(dbDriverKey, "sqlite3")
-	dbDataSource := helper.GetEnv(dbDataSourceKey, "file:localdev/sqlitedata/main.db")
+func GetEntClient(prefix string) *ent.Client {
+	dbDriver := helper.GetEnv(prefix+dbDriverKey, "sqlite3")
+	dbDataSource := helper.GetEnv(prefix+dbDataSourceKey, "file:localdev/sqlitedata/main.db")
 
 	client, err := ent.Open(dbDriver, dbDataSource)
 	if err != nil {

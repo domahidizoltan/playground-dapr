@@ -1,18 +1,20 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
-	"io"
 	"log"
 	"net/http"
 	"strings"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
-	"github.com/domahidizoltan/playground-dapr/balanceservice/client"
+	"github.com/dapr/go-sdk/service/common"
 	ent "github.com/domahidizoltan/playground-dapr/balanceservice/ent/generated"
 	"github.com/domahidizoltan/playground-dapr/balanceservice/ent/generated/balance"
+	"github.com/domahidizoltan/playground-dapr/common/client"
+	"github.com/domahidizoltan/playground-dapr/common/dto"
 	"github.com/domahidizoltan/playground-dapr/common/helper"
 )
 
@@ -55,70 +57,63 @@ func listBalances(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func updateBalance(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPut {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
+func updateBalance(ctx context.Context, event *common.TopicEvent) (bool, error) {
+	var dto *dto.UpdateBalance
+	if err := event.Struct(&dto); err != nil {
+		log.Printf("failed to parse UpdateBalance event for %s: %s", string(event.RawData), err)
+		return true, err
 	}
 
-	pathParams := strings.Split(r.URL.Path, "/")
-	if len(pathParams) != 3 {
-		helper.HttpError(w, http.StatusBadRequest, "id is missing", nil)
-		return
+	amount := float64(dto.Amount)
+	update := entClient.Balance.
+		UpdateOneID(dto.Account).
+		AddBalance(amount)
+	if amount < 0 {
+		update = update.Where(
+			balance.PendingGTE(-amount),
+		).AddPending(amount)
 	}
-	id := pathParams[2]
-
-	defer func() {
-		if err := r.Body.Close(); err != nil {
-			helper.HttpError(w, http.StatusInternalServerError, "failed to close body", err)
-			return
-		}
-	}()
-
-	body, err := io.ReadAll(r.Body)
+	newBalance, err := update.Save(ctx)
 	if err != nil {
-		helper.HttpError(w, http.StatusInternalServerError, "failed to read body", err)
-		return
+		if ent.IsNotFound(err) {
+			log.Printf("account not found or can't update balance: %+v", dto)
+			return false, err
+		}
+
+		log.Printf("failed to update balance for %s: %s", dto.Account, err)
+		return true, err
 	}
 
-	var balance *ent.Balance
-	if err := json.Unmarshal(body, &balance); err != nil {
-		helper.HttpError(w, http.StatusInternalServerError, "failed to parse body", err)
-		return
-	}
-
-	if id != balance.ID {
-		helper.HttpError(w, http.StatusBadRequest, "id must be the same", nil)
-	}
-
-	if _, err := entClient.Balance.
-		UpdateOneID(balance.ID).
-		SetBalance(balance.Balance).
-		Save(r.Context()); err != nil {
-		helper.HttpError(w, http.StatusInternalServerError, "failed to update balance", err)
-		return
-	}
-
-	log.Printf("updated balance %+v", balance)
-	w.WriteHeader(http.StatusOK)
+	log.Printf("updated balance: %v", newBalance)
+	return false, nil
 }
 
 func router(w http.ResponseWriter, r *http.Request) {
 	switch {
-	case strings.HasPrefix(r.URL.Path, "/balances/"):
-		updateBalance(w, r)
 	case strings.HasPrefix(r.URL.Path, "/balances"):
 		listBalances(w, r)
 	}
 }
 
+const (
+	service         = "BALANCE"
+	defaultHttpPort = "3000"
+)
+
 func main() {
-	entClient = client.GetEntClient()
+	entClient = client.GetEntClient(service)
 	if entClient == nil {
 		panic(errors.New("failed to create database connection"))
 	}
 
-	address := helper.GetAddress("BALANCE", "3000")
+	sub := &common.Subscription{
+		PubsubName: "updatebalance",
+		Topic:      "balance",
+		Route:      "/updatebalance",
+	}
+	go client.SubscribeTopic(service, sub, updateBalance)
+
+	address := helper.GetAddress(service, defaultHttpPort)
 	srv := &http.Server{
 		Addr:              address,
 		ReadTimeout:       5 * time.Second,
@@ -128,7 +123,6 @@ func main() {
 		Handler:           http.HandlerFunc(router),
 	}
 
-	http.HandleFunc("/balances/", updateBalance)
 	http.HandleFunc("/balances", listBalances)
 
 	log.Printf("balance service listening on address %s", address)
