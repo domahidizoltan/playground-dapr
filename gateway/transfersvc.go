@@ -8,6 +8,7 @@ import (
 	"regexp"
 
 	"github.com/dapr/go-sdk/client"
+	"github.com/domahidizoltan/playground-dapr/common/dto"
 	"github.com/domahidizoltan/playground-dapr/common/model"
 	"github.com/google/uuid"
 )
@@ -56,8 +57,8 @@ func (s TransferSvc) InitTransfer(ctx context.Context, srcAcc, dstAcc string, am
 	}
 
 	tnx := uuid.New()
-	t := model.Transfer{
-		TNX:    tnx.String(),
+	t := dto.Transfer{
+		Tnx:    tnx.String(),
 		SrcAcc: srcAcc,
 		DstAcc: dstAcc,
 		Amount: amount,

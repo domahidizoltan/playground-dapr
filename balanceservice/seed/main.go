@@ -6,8 +6,8 @@ import (
 	"log"
 	"time"
 
-	ent "github.com/domahidizoltan/playground-dapr/balanceservice/ent/generated"
-	"github.com/domahidizoltan/playground-dapr/common/client"
+	"github.com/domahidizoltan/playground-dapr/balanceservice/ent"
+	entGen "github.com/domahidizoltan/playground-dapr/balanceservice/ent/generated"
 	"github.com/domahidizoltan/playground-dapr/common/model"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -19,7 +19,7 @@ const (
 
 func main() {
 	log.Println("start balance seed")
-	client := client.GetEntClient("BALANCE")
+	client := ent.GetClient("BALANCE")
 	defer client.Close()
 
 	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
@@ -30,7 +30,7 @@ func main() {
 	createAccounts(c, ctx)
 }
 
-func deleteAll(c *ent.BalanceClient, ctx context.Context) {
+func deleteAll(c *entGen.BalanceClient, ctx context.Context) {
 	rows, err := c.Delete().Exec(ctx)
 	if err != nil {
 		log.Fatalf("failed to delete balances: %s", err.Error())
@@ -38,7 +38,7 @@ func deleteAll(c *ent.BalanceClient, ctx context.Context) {
 	log.Printf("deleted %d balance records", rows)
 }
 
-func createAccounts(c *ent.BalanceClient, ctx context.Context) {
+func createAccounts(c *entGen.BalanceClient, ctx context.Context) {
 	const balanceCount = 1000
 	errorCount := 0
 	for i := range [balanceCount]struct{}{} {

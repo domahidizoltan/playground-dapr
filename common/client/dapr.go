@@ -13,15 +13,23 @@ const (
 	subscriberPortKey = "_SUBSCRIBER_PORT"
 )
 
-func SubscribeTopic(servicePrefix string, sub *common.Subscription, handler common.TopicEventHandler) {
+type SubscriptionHandler struct {
+	Subscription *common.Subscription
+	Handler      common.TopicEventHandler
+}
+
+func SubscribeTopic(servicePrefix string, subscriptions []SubscriptionHandler) {
 	port := helper.GetEnv(servicePrefix+subscriberPortKey, "3001")
-	log.Printf("starting subscriber %s on port %s", sub.PubsubName, port)
+	log.Printf("starting subscription service %s on port %s", servicePrefix, port)
 	s := daprd.NewService(":" + port)
-	if err := s.AddTopicEventHandler(sub, handler); err != nil {
-		log.Fatalf("error adding topic subscription for %s: %v", sub.Topic, err)
+
+	for _, sub := range subscriptions {
+		if err := s.AddTopicEventHandler(sub.Subscription, sub.Handler); err != nil {
+			log.Fatalf("error adding topic subscription for %s: %v", sub.Subscription.Topic, err)
+		}
 	}
 
 	if err := s.Start(); err != nil && err != http.ErrServerClosed {
-		log.Fatalf("error listenning %s: %v", sub.PubsubName, err)
+		log.Fatalf("%s failed listenning: %v", servicePrefix, err)
 	}
 }

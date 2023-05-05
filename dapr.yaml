@@ -26,4 +26,4 @@ apps:
     appDirPath: .
     appPort: 3001
     daprHTTPPort: 8001
-    command: ["go","run", "transaction/main.go"]
+    command: ["go","run", "transactionservice/main.go"]

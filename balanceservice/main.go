@@ -11,14 +11,15 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"github.com/dapr/go-sdk/service/common"
-	ent "github.com/domahidizoltan/playground-dapr/balanceservice/ent/generated"
+	"github.com/domahidizoltan/playground-dapr/balanceservice/ent"
+	entGen "github.com/domahidizoltan/playground-dapr/balanceservice/ent/generated"
 	"github.com/domahidizoltan/playground-dapr/balanceservice/ent/generated/balance"
 	"github.com/domahidizoltan/playground-dapr/common/client"
 	"github.com/domahidizoltan/playground-dapr/common/dto"
 	"github.com/domahidizoltan/playground-dapr/common/helper"
 )
 
-var entClient *ent.Client
+var entClient *entGen.Client
 
 func listBalances(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
@@ -75,7 +76,7 @@ func updateBalance(ctx context.Context, event *common.TopicEvent) (bool, error) 
 	}
 	newBalance, err := update.Save(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
+		if entGen.IsNotFound(err) {
 			log.Printf("account not found or can't update balance: %+v", dto)
 			return false, err
 		}
@@ -100,18 +101,27 @@ const (
 	defaultHttpPort = "3000"
 )
 
-func main() {
-	entClient = client.GetEntClient(service)
-	if entClient == nil {
-		panic(errors.New("failed to create database connection"))
-	}
-
-	sub := &common.Subscription{
+var (
+	updateBalanceSub = &common.Subscription{
 		PubsubName: "updatebalance",
 		Topic:      "balance",
 		Route:      "/updatebalance",
 	}
-	go client.SubscribeTopic(service, sub, updateBalance)
+)
+
+func main() {
+	entClient = ent.GetClient(service)
+	if entClient == nil {
+		panic(errors.New("failed to create database connection"))
+	}
+
+	subscriptions := []client.SubscriptionHandler{
+		{
+			Subscription: updateBalanceSub,
+			Handler:      updateBalance,
+		},
+	}
+	go client.SubscribeTopic(service, subscriptions)
 
 	address := helper.GetAddress(service, defaultHttpPort)
 	srv := &http.Server{

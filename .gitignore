@@ -3,4 +3,4 @@
 tmp/
 bin/
 .dapr/
-localdev/sqlite/main.db
+localdev/sqlitedata/main.db

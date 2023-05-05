@@ -16,10 +16,3 @@ const (
 	AccPrefix   = "ACC"
 	AccPattern  = AccPrefix + "[0-9]{3}"
 )
-
-type Transfer struct {
-	TNX    string
-	SrcAcc string
-	DstAcc string
-	Amount float32
-}

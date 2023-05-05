@@ -1,6 +1,6 @@
 install: install-dapr-cli update-dapr-components
 
-start-app:
+start-app: stop-app delete-logs
 	dapr run --run-file dapr.yaml &
 
 stop-app:
@@ -35,3 +35,11 @@ PUB_BALANCE_ADDR=localhost:3001
 publish-update-balance: 
 	curl -X POST http://$(PUB_BALANCE_ADDR)/updatebalance \
 		-d '{"datacontenttype": "application/json", "data": {"account":"$(ACC)","amount":$(AMT)}, "topic": "balance", "pubsubname": "updatebalance"}'
+
+PUB_TNX_ADDR=localhost:3001
+publish-debit: 
+	curl -X POST http://$(PUB_TNX_ADDR)/debitsource \
+		-d '{"datacontenttype": "application/json", "data": {"tnx":"$(TNX)","amount":$(AMT), "srcAcc":"$(SRC)", "dstAcc":"$(DST)"}, "topic": "transfer", "pubsubname": "debit-source"}'
+publish-credit: 
+	curl -X POST http://$(PUB_TNX_ADDR)/creditdest \
+		-d '{"datacontenttype": "application/json", "data": {"tnx":"$(TNX)","amount":$(AMT), "srcAcc":"$(SRC)", "dstAcc":"$(DST)"}, "topic": "transfer", "pubsubname": "credit-dest"}'
