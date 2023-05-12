@@ -13,7 +13,7 @@ var (
 	BalanceColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeString, Unique: true},
 		{Name: "balance", Type: field.TypeFloat64, Default: 0},
-		{Name: "pending", Type: field.TypeFloat64, Default: 0},
+		{Name: "locked", Type: field.TypeFloat64, Default: 0},
 	}
 	// BalanceTable holds the schema information for the "balance" table.
 	BalanceTable = &schema.Table{

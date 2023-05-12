@@ -4,11 +4,14 @@ import (
 	"context"
 	"errors"
 	"log"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/dapr/go-sdk/service/common"
 	"github.com/domahidizoltan/playground-dapr/common/client"
 	"github.com/domahidizoltan/playground-dapr/common/dto"
+	"github.com/domahidizoltan/playground-dapr/common/helper"
 	"github.com/domahidizoltan/playground-dapr/common/model"
 	"github.com/domahidizoltan/playground-dapr/transactionservice/ent"
 	entGen "github.com/domahidizoltan/playground-dapr/transactionservice/ent/generated"
@@ -17,29 +20,48 @@ import (
 	dapr "github.com/dapr/go-sdk/client"
 )
 
+type appModeType string
+
 const (
-	service          = "TRANSACTION"
-	debitPubSubName  = "debitsource"
-	creditPubSubName = "creditdest"
-	topicName        = "transfer"
+	creditAppModeType appModeType = "credit"
+	debitAppModeType  appModeType = "debit"
 )
 
 var (
-	entClient      *entGen.Client
-	daprClient     dapr.Client
-	debitSourceSub = &common.Subscription{
-		PubsubName: "debit-source",
-		Topic:      "transfer",
-		Route:      "/debitsource",
-	}
-	creditDestSub = &common.Subscription{
-		PubsubName: "credit-dest",
-		Topic:      "transfer",
-		Route:      "/creditdest",
+	appMode                                                       appModeType
+	pubsubName, debitTopicName, creditTopicName, balanceTopicName string
+	service                                                       string
+
+	entClient     *entGen.Client
+	daprClient    dapr.Client
+	subscriptions = map[appModeType]*common.Subscription{
+		debitAppModeType: {
+			PubsubName: "DEBIT_TRANSACTION_PUBSUB",
+			Topic:      debitTopicName,
+			Route:      "/debitSourceCommand",
+		},
+		creditAppModeType: {
+			PubsubName: "DEBIT_TRANSACTION_PUBSUB",
+			Topic:      creditTopicName,
+			Route:      "/creditDestCommand",
+		},
 	}
 )
 
 func main() {
+	if len(os.Args) < 2 {
+		panic(errors.New("appMode is not defined"))
+	}
+
+	switch os.Args[1] {
+	case string(debitAppModeType), string(creditAppModeType):
+		appMode = appModeType(os.Args[1])
+	default:
+		panic(errors.New("unknown appMode"))
+	}
+
+	service = strings.ToUpper(string(appMode)) + "_TRANSACTION"
+
 	entClient = ent.GetClient(service)
 	if entClient == nil {
 		panic(errors.New("failed to create database connection"))
@@ -52,69 +74,95 @@ func main() {
 	}
 	defer daprClient.Close()
 
+	debitTopicName = helper.GetEnv(strings.ToUpper(service)+"TNX_TOPIC_DEBIT_TRANSACTION", "topic.credit_transaction")
+	creditTopicName = helper.GetEnv(strings.ToUpper(service)+"TNX_TOPIC_CREDIT_TRANSACTION", "topic.credit_transaction")
+	balanceTopicName = helper.GetEnv(strings.ToUpper(service)+"TNX_TOPIC_BALANCE", "topic.balance")
+
 	subscriptions := []client.SubscriptionHandler{
 		{
-			Subscription: debitSourceSub,
-			Handler:      doTransaction(true),
-		},
-		{
-			Subscription: creditDestSub,
-			Handler:      doTransaction(false),
+			Subscription: subscriptions[appMode],
+			Handler:      commandHandler,
 		},
 	}
 	client.SubscribeTopic(service, subscriptions)
 }
 
-func doTransaction(isDebit bool) func(ctx context.Context, event *common.TopicEvent) (bool, error) {
-	return func(ctx context.Context, event *common.TopicEvent) (bool, error) {
-		var transfer *dto.Transfer
-		if err := event.Struct(&transfer); err != nil {
-			log.Printf("failed to read transfer %s: %s", string(event.RawData), err)
-			return true, err
-		}
+func commandHandler(ctx context.Context, event *common.TopicEvent) (bool, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 
-		dest := transfer.DstAcc
-		src := transfer.SrcAcc
-		var pubSubName string
-		var updateBalance dto.UpdateBalance
-		switch isDebit {
-		case true:
-			dest = model.BankAccount
-			pubSubName = debitPubSubName
-			updateBalance = dto.UpdateBalance{
-				Account: transfer.DstAcc,
-				Amount:  -transfer.Amount,
-			}
-		case false:
-			src = model.BankAccount
-			pubSubName = creditPubSubName
-			updateBalance = dto.UpdateBalance{
-				Account: transfer.SrcAcc,
-				Amount:  transfer.Amount,
-			}
-
-		}
-
-		newTransaction, err := entClient.Transaction.Create().
-			SetID(uuid.New()).
-			SetTnx(transfer.Tnx).
-			SetDestAcc(dest).
-			SetSourceAcc(src).
-			SetAmount(float64(transfer.Amount)).
-			SetDatetime(time.Now().UTC()).
-			Save(ctx)
-		if err != nil {
-			log.Printf("failed to save transaction for %v: %s", transfer, err)
-			return true, err
-		}
-
-		log.Printf("saved transaction %+v", newTransaction)
-
-		if err := daprClient.PublishEvent(ctx, pubSubName, topicName, updateBalance); err != nil {
-			log.Printf("failed to update balance %v: %s", updateBalance, err)
-			return false, err
-		}
-
-		return false, nil
+	var cmd *dto.TransferCommand
+	if err := event.Struct(&cmd); err != nil {
+		log.Printf("failed to parse TransferCommand for %s: %s", string(event.RawData), err)
+		return true, err
 	}
+
+	switch cmd.Command {
+	case dto.DebitSourceCommandType:
+		if err := doTransaction(ctx, *cmd); err != nil {
+			if errors.Is(err, dto.BusinessError) {
+				return false, err
+			}
+			return true, err
+		}
+
+		return publishCommand(ctx, *cmd, dto.UpdateSourceBalanceCommandType)
+
+	case dto.CreditDestCommandType:
+		if err := doTransaction(ctx, *cmd); err != nil {
+			if errors.Is(err, dto.BusinessError) {
+				return false, err
+			}
+			return true, err
+		}
+
+		return publishCommand(ctx, *cmd, dto.UpdateDestBalanceCommandType)
+	}
+
+	log.Printf("unknown command type: %s", cmd.Command)
+	return false, nil
+}
+
+func publishCommand(ctx context.Context, cmd dto.TransferCommand, newCommandType dto.CommandType) (bool, error) {
+	newCmd := cmd
+	newCmd.Command = newCommandType
+	topicName := ""
+	switch newCommandType {
+	case dto.UpdateSourceBalanceCommandType, dto.UpdateDestBalanceCommandType:
+		topicName = balanceTopicName
+	}
+	if err := daprClient.PublishEvent(ctx, pubsubName, topicName, newCmd); err != nil {
+		log.Printf("failed to publish command %v: %s", newCmd, err)
+		return false, err
+	}
+
+	return false, nil
+}
+
+func doTransaction(ctx context.Context, transfer dto.TransferCommand) error {
+	dest := transfer.DstAcc
+	src := transfer.SrcAcc
+	switch transfer.Command {
+	case dto.DebitSourceCommandType:
+		dest = model.BankAccount
+	case dto.CreditDestCommandType:
+		src = model.BankAccount
+	}
+
+	newTransaction, err := entClient.Transaction.Create().
+		SetID(uuid.New()).
+		SetTnx(transfer.Tnx).
+		SetDestAcc(dest).
+		SetSourceAcc(src).
+		SetAmount(transfer.Amount).
+		SetDatetime(time.Now().UTC()).
+		Save(ctx)
+	if err != nil {
+		log.Printf("failed to save transaction for %v: %s", transfer, err)
+		return err
+	}
+
+	log.Printf("saved transaction %+v", newTransaction)
+
+	return nil
 }

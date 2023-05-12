@@ -2,14 +2,11 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
-	"net/http"
-	"strings"
 	"time"
 
-	"entgo.io/ent/dialect/sql"
 	"github.com/dapr/go-sdk/service/common"
 	"github.com/domahidizoltan/playground-dapr/balanceservice/ent"
 	entGen "github.com/domahidizoltan/playground-dapr/balanceservice/ent/generated"
@@ -17,126 +14,161 @@ import (
 	"github.com/domahidizoltan/playground-dapr/common/client"
 	"github.com/domahidizoltan/playground-dapr/common/dto"
 	"github.com/domahidizoltan/playground-dapr/common/helper"
+
+	dapr "github.com/dapr/go-sdk/client"
 )
 
-var entClient *entGen.Client
+const (
+	service    = "BALANCE"
+	pubsubName = service + "_PUBSUB"
+)
 
-func listBalances(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
+var (
+	entClient  entGen.Client
+	daprClient dapr.Client
 
-	if err := r.ParseForm(); err != nil {
-		helper.HttpError(w, http.StatusInternalServerError, "failed to parse query params", err)
-		return
-	}
+	balanceTopicName   = helper.GetEnv(service+"_TOPIC_BALANCE", "topic.balance")
+	creditTnxTopicName = helper.GetEnv(service+"_TOPIC_CREDIT_TRANSACTION", "topic.credit_transaction")
+	debitTnxTopicName  = helper.GetEnv(service+"_TOPIC_DEBIT_TRANSACTION", "topic.debit_transaction")
+)
 
-	accounts := make([]any, len(r.Form["account"]))
-	for _, acc := range r.Form["account"] {
-		accounts = append(accounts, acc)
-	}
-	balances, err := entClient.Balance.Query().Where(func(s *sql.Selector) {
-		s.Where(sql.In(balance.FieldID, accounts...))
-	}).All(r.Context())
+func lockBalance(ctx context.Context, account string, amount float64) error {
+	acc, err := entClient.Balance.Get(ctx, account)
 	if err != nil {
-		helper.HttpError(w, http.StatusInternalServerError, "failed to get account balances", err)
-		return
+		if entGen.IsNotFound(err) {
+			log.Printf("account %s not found: %s", account, err)
+			return fmt.Errorf("%w: account not found: %s", dto.BusinessError, err)
+		}
+		return err
 	}
 
-	resp, err := json.Marshal(balances)
-	if err != nil {
-		helper.HttpError(w, http.StatusInternalServerError, "failed to marshall response", err)
-		return
+	if acc.Balance < amount {
+		log.Printf("insufficient balance for account %s: %s", account, err)
+		return fmt.Errorf("%w: insufficient balance", dto.BusinessError)
 	}
 
-	w.WriteHeader(http.StatusOK)
-	if _, err := w.Write(resp); err != nil {
-		helper.HttpError(w, http.StatusInternalServerError, "failed to write response", err)
-		return
+	if _, err := entClient.Balance.
+		UpdateOneID(acc.ID).
+		AddLocked(amount).
+		Save(ctx); err != nil {
+		log.Printf("failed to lock balance for account %s: %s", account, err)
+		return err
 	}
 
+	return nil
 }
 
-func updateBalance(ctx context.Context, event *common.TopicEvent) (bool, error) {
-	var dto *dto.UpdateBalance
-	if err := event.Struct(&dto); err != nil {
-		log.Printf("failed to parse UpdateBalance event for %s: %s", string(event.RawData), err)
-		return true, err
-	}
-
-	amount := float64(dto.Amount)
+func updateBalance(ctx context.Context, account string, amount float64) error {
 	update := entClient.Balance.
-		UpdateOneID(dto.Account).
+		UpdateOneID(account).
 		AddBalance(amount)
 	if amount < 0 {
 		update = update.Where(
-			balance.PendingGTE(-amount),
-		).AddPending(amount)
+			balance.LockedGTE(-amount),
+		).AddLocked(amount)
 	}
 	newBalance, err := update.Save(ctx)
 	if err != nil {
 		if entGen.IsNotFound(err) {
-			log.Printf("account not found or can't update balance: %+v", dto)
-			return false, err
+			log.Printf("account not found or can't update balance %s: %s", account, err)
+			return fmt.Errorf("%w: account not found or can't update balance: %s", dto.BusinessError, err)
 		}
 
-		log.Printf("failed to update balance for %s: %s", dto.Account, err)
-		return true, err
+		log.Printf("failed to update balance for %s: %s", account, err)
+		return err
 	}
 
 	log.Printf("updated balance: %v", newBalance)
+	return nil
+}
+
+func publishCommand(ctx context.Context, cmd dto.TransferCommand, newCommandType dto.CommandType) (bool, error) {
+	newCmd := cmd
+	newCmd.Command = newCommandType
+	topicName := ""
+	switch newCommandType {
+	case dto.DebitSourceCommandType:
+		topicName = creditTnxTopicName
+	case dto.CreditDestCommandType:
+		topicName = debitTnxTopicName
+	}
+	if err := daprClient.PublishEvent(ctx, pubsubName, topicName, newCmd); err != nil {
+		log.Printf("failed to publish command %v: %s", newCmd, err)
+		return false, err
+	}
+
 	return false, nil
 }
 
-func router(w http.ResponseWriter, r *http.Request) {
-	switch {
-	case strings.HasPrefix(r.URL.Path, "/balances"):
-		listBalances(w, r)
+func commandHandler(ctx context.Context, event *common.TopicEvent) (bool, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	var cmd *dto.TransferCommand
+	if err := event.Struct(&cmd); err != nil {
+		log.Printf("failed to parse TransferCommand for %s: %s", string(event.RawData), err)
+		return true, err
 	}
+
+	switch cmd.Command {
+	case dto.LockBalanceCommandType:
+		if err := lockBalance(ctx, cmd.SrcAcc, cmd.Amount); err != nil {
+			if errors.Is(err, dto.BusinessError) {
+				return false, err
+			}
+			return true, err
+		}
+
+		return publishCommand(ctx, *cmd, dto.DebitSourceCommandType)
+
+	case dto.UpdateSourceBalanceCommandType:
+		if err := updateBalance(ctx, cmd.SrcAcc, -cmd.Amount); err != nil {
+			if errors.Is(err, dto.BusinessError) {
+				return false, err
+			}
+			return true, err
+		}
+
+		return publishCommand(ctx, *cmd, dto.CreditDestCommandType)
+
+	case dto.UpdateDestBalanceCommandType:
+		if err := updateBalance(ctx, cmd.DstAcc, cmd.Amount); err != nil {
+			if errors.Is(err, dto.BusinessError) {
+				return false, err
+			}
+			return true, err
+		}
+
+	}
+
+	log.Printf("unknown command type: %s", cmd.Command)
+	return false, nil
 }
 
-const (
-	service         = "BALANCE"
-	defaultHttpPort = "3000"
-)
-
-var (
-	updateBalanceSub = &common.Subscription{
-		PubsubName: "updatebalance",
-		Topic:      "balance",
-		Route:      "/updatebalance",
-	}
-)
+var balanceSub = &common.Subscription{
+	PubsubName: "balance",
+	Topic:      balanceTopicName,
+	Route:      "/balanceCommand",
+}
 
 func main() {
-	entClient = ent.GetClient(service)
-	if entClient == nil {
+	ec := ent.GetClient(service)
+	if ec == nil {
 		panic(errors.New("failed to create database connection"))
 	}
+	entClient = *ec
+
+	daprClient, err := dapr.NewClient()
+	if err != nil {
+		log.Fatalf("failed to init DAPR client: %s", err)
+	}
+	defer daprClient.Close()
 
 	subscriptions := []client.SubscriptionHandler{
 		{
-			Subscription: updateBalanceSub,
-			Handler:      updateBalance,
+			Subscription: balanceSub,
+			Handler:      commandHandler,
 		},
 	}
-	go client.SubscribeTopic(service, subscriptions)
-
-	address := helper.GetAddress(service, defaultHttpPort)
-	srv := &http.Server{
-		Addr:              address,
-		ReadTimeout:       5 * time.Second,
-		WriteTimeout:      2 * time.Second,
-		IdleTimeout:       30 * time.Second,
-		ReadHeaderTimeout: 2 * time.Second,
-		Handler:           http.HandlerFunc(router),
-	}
-
-	http.HandleFunc("/balances", listBalances)
-
-	log.Printf("balance service listening on address %s", address)
-	if err := srv.ListenAndServe(); err != nil {
-		panic(err)
-	}
+	client.SubscribeTopic(service, subscriptions)
 }

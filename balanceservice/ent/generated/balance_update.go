@@ -48,24 +48,24 @@ func (bu *BalanceUpdate) AddBalance(f float64) *BalanceUpdate {
 	return bu
 }
 
-// SetPending sets the "pending" field.
-func (bu *BalanceUpdate) SetPending(f float64) *BalanceUpdate {
-	bu.mutation.ResetPending()
-	bu.mutation.SetPending(f)
+// SetLocked sets the "locked" field.
+func (bu *BalanceUpdate) SetLocked(f float64) *BalanceUpdate {
+	bu.mutation.ResetLocked()
+	bu.mutation.SetLocked(f)
 	return bu
 }
 
-// SetNillablePending sets the "pending" field if the given value is not nil.
-func (bu *BalanceUpdate) SetNillablePending(f *float64) *BalanceUpdate {
+// SetNillableLocked sets the "locked" field if the given value is not nil.
+func (bu *BalanceUpdate) SetNillableLocked(f *float64) *BalanceUpdate {
 	if f != nil {
-		bu.SetPending(*f)
+		bu.SetLocked(*f)
 	}
 	return bu
 }
 
-// AddPending adds f to the "pending" field.
-func (bu *BalanceUpdate) AddPending(f float64) *BalanceUpdate {
-	bu.mutation.AddPending(f)
+// AddLocked adds f to the "locked" field.
+func (bu *BalanceUpdate) AddLocked(f float64) *BalanceUpdate {
+	bu.mutation.AddLocked(f)
 	return bu
 }
 
@@ -108,9 +108,9 @@ func (bu *BalanceUpdate) check() error {
 			return &ValidationError{Name: "balance", err: fmt.Errorf(`generated: validator failed for field "Balance.balance": %w`, err)}
 		}
 	}
-	if v, ok := bu.mutation.Pending(); ok {
-		if err := balance.PendingValidator(v); err != nil {
-			return &ValidationError{Name: "pending", err: fmt.Errorf(`generated: validator failed for field "Balance.pending": %w`, err)}
+	if v, ok := bu.mutation.Locked(); ok {
+		if err := balance.LockedValidator(v); err != nil {
+			return &ValidationError{Name: "locked", err: fmt.Errorf(`generated: validator failed for field "Balance.locked": %w`, err)}
 		}
 	}
 	return nil
@@ -134,11 +134,11 @@ func (bu *BalanceUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if value, ok := bu.mutation.AddedBalance(); ok {
 		_spec.AddField(balance.FieldBalance, field.TypeFloat64, value)
 	}
-	if value, ok := bu.mutation.Pending(); ok {
-		_spec.SetField(balance.FieldPending, field.TypeFloat64, value)
+	if value, ok := bu.mutation.Locked(); ok {
+		_spec.SetField(balance.FieldLocked, field.TypeFloat64, value)
 	}
-	if value, ok := bu.mutation.AddedPending(); ok {
-		_spec.AddField(balance.FieldPending, field.TypeFloat64, value)
+	if value, ok := bu.mutation.AddedLocked(); ok {
+		_spec.AddField(balance.FieldLocked, field.TypeFloat64, value)
 	}
 	if n, err = sqlgraph.UpdateNodes(ctx, bu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -181,24 +181,24 @@ func (buo *BalanceUpdateOne) AddBalance(f float64) *BalanceUpdateOne {
 	return buo
 }
 
-// SetPending sets the "pending" field.
-func (buo *BalanceUpdateOne) SetPending(f float64) *BalanceUpdateOne {
-	buo.mutation.ResetPending()
-	buo.mutation.SetPending(f)
+// SetLocked sets the "locked" field.
+func (buo *BalanceUpdateOne) SetLocked(f float64) *BalanceUpdateOne {
+	buo.mutation.ResetLocked()
+	buo.mutation.SetLocked(f)
 	return buo
 }
 
-// SetNillablePending sets the "pending" field if the given value is not nil.
-func (buo *BalanceUpdateOne) SetNillablePending(f *float64) *BalanceUpdateOne {
+// SetNillableLocked sets the "locked" field if the given value is not nil.
+func (buo *BalanceUpdateOne) SetNillableLocked(f *float64) *BalanceUpdateOne {
 	if f != nil {
-		buo.SetPending(*f)
+		buo.SetLocked(*f)
 	}
 	return buo
 }
 
-// AddPending adds f to the "pending" field.
-func (buo *BalanceUpdateOne) AddPending(f float64) *BalanceUpdateOne {
-	buo.mutation.AddPending(f)
+// AddLocked adds f to the "locked" field.
+func (buo *BalanceUpdateOne) AddLocked(f float64) *BalanceUpdateOne {
+	buo.mutation.AddLocked(f)
 	return buo
 }
 
@@ -254,9 +254,9 @@ func (buo *BalanceUpdateOne) check() error {
 			return &ValidationError{Name: "balance", err: fmt.Errorf(`generated: validator failed for field "Balance.balance": %w`, err)}
 		}
 	}
-	if v, ok := buo.mutation.Pending(); ok {
-		if err := balance.PendingValidator(v); err != nil {
-			return &ValidationError{Name: "pending", err: fmt.Errorf(`generated: validator failed for field "Balance.pending": %w`, err)}
+	if v, ok := buo.mutation.Locked(); ok {
+		if err := balance.LockedValidator(v); err != nil {
+			return &ValidationError{Name: "locked", err: fmt.Errorf(`generated: validator failed for field "Balance.locked": %w`, err)}
 		}
 	}
 	return nil
@@ -297,11 +297,11 @@ func (buo *BalanceUpdateOne) sqlSave(ctx context.Context) (_node *Balance, err e
 	if value, ok := buo.mutation.AddedBalance(); ok {
 		_spec.AddField(balance.FieldBalance, field.TypeFloat64, value)
 	}
-	if value, ok := buo.mutation.Pending(); ok {
-		_spec.SetField(balance.FieldPending, field.TypeFloat64, value)
+	if value, ok := buo.mutation.Locked(); ok {
+		_spec.SetField(balance.FieldLocked, field.TypeFloat64, value)
 	}
-	if value, ok := buo.mutation.AddedPending(); ok {
-		_spec.AddField(balance.FieldPending, field.TypeFloat64, value)
+	if value, ok := buo.mutation.AddedLocked(); ok {
+		_spec.AddField(balance.FieldLocked, field.TypeFloat64, value)
 	}
 	_node = &Balance{config: buo.config}
 	_spec.Assign = _node.assignValues

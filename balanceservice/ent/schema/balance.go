@@ -17,7 +17,7 @@ func (Balance) Fields() []ent.Field {
 	return []ent.Field{
 		field.String("id").NotEmpty().Unique(),
 		field.Float("balance").Min(0).Default(0),
-		field.Float("pending").Min(0).Default(0),
+		field.Float("locked").Min(0).Default(0),
 	}
 }
 

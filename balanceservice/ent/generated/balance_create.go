@@ -33,16 +33,16 @@ func (bc *BalanceCreate) SetNillableBalance(f *float64) *BalanceCreate {
 	return bc
 }
 
-// SetPending sets the "pending" field.
-func (bc *BalanceCreate) SetPending(f float64) *BalanceCreate {
-	bc.mutation.SetPending(f)
+// SetLocked sets the "locked" field.
+func (bc *BalanceCreate) SetLocked(f float64) *BalanceCreate {
+	bc.mutation.SetLocked(f)
 	return bc
 }
 
-// SetNillablePending sets the "pending" field if the given value is not nil.
-func (bc *BalanceCreate) SetNillablePending(f *float64) *BalanceCreate {
+// SetNillableLocked sets the "locked" field if the given value is not nil.
+func (bc *BalanceCreate) SetNillableLocked(f *float64) *BalanceCreate {
 	if f != nil {
-		bc.SetPending(*f)
+		bc.SetLocked(*f)
 	}
 	return bc
 }
@@ -92,9 +92,9 @@ func (bc *BalanceCreate) defaults() {
 		v := balance.DefaultBalance
 		bc.mutation.SetBalance(v)
 	}
-	if _, ok := bc.mutation.Pending(); !ok {
-		v := balance.DefaultPending
-		bc.mutation.SetPending(v)
+	if _, ok := bc.mutation.Locked(); !ok {
+		v := balance.DefaultLocked
+		bc.mutation.SetLocked(v)
 	}
 }
 
@@ -108,12 +108,12 @@ func (bc *BalanceCreate) check() error {
 			return &ValidationError{Name: "balance", err: fmt.Errorf(`generated: validator failed for field "Balance.balance": %w`, err)}
 		}
 	}
-	if _, ok := bc.mutation.Pending(); !ok {
-		return &ValidationError{Name: "pending", err: errors.New(`generated: missing required field "Balance.pending"`)}
+	if _, ok := bc.mutation.Locked(); !ok {
+		return &ValidationError{Name: "locked", err: errors.New(`generated: missing required field "Balance.locked"`)}
 	}
-	if v, ok := bc.mutation.Pending(); ok {
-		if err := balance.PendingValidator(v); err != nil {
-			return &ValidationError{Name: "pending", err: fmt.Errorf(`generated: validator failed for field "Balance.pending": %w`, err)}
+	if v, ok := bc.mutation.Locked(); ok {
+		if err := balance.LockedValidator(v); err != nil {
+			return &ValidationError{Name: "locked", err: fmt.Errorf(`generated: validator failed for field "Balance.locked": %w`, err)}
 		}
 	}
 	if v, ok := bc.mutation.ID(); ok {
@@ -160,9 +160,9 @@ func (bc *BalanceCreate) createSpec() (*Balance, *sqlgraph.CreateSpec) {
 		_spec.SetField(balance.FieldBalance, field.TypeFloat64, value)
 		_node.Balance = value
 	}
-	if value, ok := bc.mutation.Pending(); ok {
-		_spec.SetField(balance.FieldPending, field.TypeFloat64, value)
-		_node.Pending = value
+	if value, ok := bc.mutation.Locked(); ok {
+		_spec.SetField(balance.FieldLocked, field.TypeFloat64, value)
+		_node.Locked = value
 	}
 	return _node, _spec
 }

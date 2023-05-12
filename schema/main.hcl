@@ -11,7 +11,7 @@ table "balance" {
     type = float
     default = 0
   }
-  column "pending" {
+  column "locked" {
     null = false
     type = float
     default = 0

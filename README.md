@@ -24,23 +24,22 @@ debitTnx : debit source
 creditTnx : credit destination
 
 [*] --> inputfile
-inputfile -> gateway
-gateway -down[#blue]-> statestore : PENDING[1]
-gateway -up[#blue]-> balance : reserve pending amounts
-balance -[#blue]> gateway : get account balance
+inputfile -left> gateway
+gateway -[#blue]-> balance : lock amount and init transfer
+balance -down[#blue]-> statestore : PENDING[1]
+balance -left[dashed,#orange]> debitTnx : topic.debit_source
 
-gateway -[#orange]> debitTnx
-debitTnx -[#orange]> balance : update source
+debitTnx -[dashed,#orange]> balance : topic.update_source_balance
 
-balance -[#green]> creditTnx
-creditTnx -[#green]> balance : update destination
+balance -right[dashed,#green]> creditTnx : topic.credit_destination
+creditTnx -[dashed,#green]> balance : topic.update_destination_balance
 balance -[#green]> statestore : COMPLETED[4]
 
 statestore -[#red]> gateway
 gateway -[#red]-> outputfile
-outputfile -down[#red]-> [*]
+outputfile -[#red]-> [*]
 @enduml
 ```
 </details>
 
-![plan](http://www.plantuml.com/plantuml/svg/PP8nQ_im4CNt-nI2__O73uLE7KgW2QNGfXco6GyNwMe4oib8fwRzzfNQo8hnb2Flz-uTJzv4mI3fxC3obEJ3Eb8FYkcY9217r68zH_19cghzv4Z8B1539oj7_ih0xwYYJq4Jw42c2dzprgDOnk83wFyFgkiUrPn_Sqd-UqIX2tx3zLTrnb-u_tToYOOiHq6XA3wKmmwx_VPb_zpV3GrFKuDFw91r8GD52f-a9c9ZULHuzeabGYMwgsdEpvwHHA7M1QoReEOKWm_8Ox7K9g0E2xKTaIQ3GhMds-mn475cv-vQYqrUhreKkrwtBElf_UtmkZlkjltz0D2aOiXXmwhwAkGYs-S0RRm-JMNokyA6sAIp-m40)
+![plan](http://www.plantuml.com/plantuml/svg/TL9DQm8n4BtdLmIybQPGwAa74QgKGcizU5iMYScuXiPaoKwm_VUTrKrd5-d98U_3DszdqQ5Ec4zUkD1cF3WFyba6E4jCEdJQe8kX4p4ZeoQs7X3ib69Xxt0Rlebm6MKNSp8WJ09RWEjCU8Skw5udH7LNIwNcyk__HqcKXmFEPQCHplf73BzILREzpr2JQg-z3WR8sqVp9VKfve1I1qj-3gy93v14uIaRpu7bj3rIc9XwXyrglNnRlrQFDTFx09NLtH7i_IoIMmFrN8vsnTWwyt1vs0qRSnNgLbgSYpAtLYCCqjs02WwGN7Fa14q22EJ2fHQVwyjkN2sJrDJWtnXZUSd2KQgYdjRsylcnULzjLylggHQ2eLwGmDQttsy0g7--Ay7Z2AVZ40i8bWxq5m00)

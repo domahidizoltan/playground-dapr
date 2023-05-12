@@ -13,8 +13,8 @@ const (
 	FieldID = "id"
 	// FieldBalance holds the string denoting the balance field in the database.
 	FieldBalance = "balance"
-	// FieldPending holds the string denoting the pending field in the database.
-	FieldPending = "pending"
+	// FieldLocked holds the string denoting the locked field in the database.
+	FieldLocked = "locked"
 	// Table holds the table name of the balance in the database.
 	Table = "balance"
 )
@@ -23,7 +23,7 @@ const (
 var Columns = []string{
 	FieldID,
 	FieldBalance,
-	FieldPending,
+	FieldLocked,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -41,10 +41,10 @@ var (
 	DefaultBalance float64
 	// BalanceValidator is a validator for the "balance" field. It is called by the builders before save.
 	BalanceValidator func(float64) error
-	// DefaultPending holds the default value on creation for the "pending" field.
-	DefaultPending float64
-	// PendingValidator is a validator for the "pending" field. It is called by the builders before save.
-	PendingValidator func(float64) error
+	// DefaultLocked holds the default value on creation for the "locked" field.
+	DefaultLocked float64
+	// LockedValidator is a validator for the "locked" field. It is called by the builders before save.
+	LockedValidator func(float64) error
 	// IDValidator is a validator for the "id" field. It is called by the builders before save.
 	IDValidator func(string) error
 )
@@ -62,7 +62,7 @@ func ByBalance(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldBalance, opts...).ToFunc()
 }
 
-// ByPending orders the results by the pending field.
-func ByPending(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldPending, opts...).ToFunc()
+// ByLocked orders the results by the locked field.
+func ByLocked(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLocked, opts...).ToFunc()
 }

@@ -19,12 +19,12 @@ func init() {
 	balance.DefaultBalance = balanceDescBalance.Default.(float64)
 	// balance.BalanceValidator is a validator for the "balance" field. It is called by the builders before save.
 	balance.BalanceValidator = balanceDescBalance.Validators[0].(func(float64) error)
-	// balanceDescPending is the schema descriptor for pending field.
-	balanceDescPending := balanceFields[2].Descriptor()
-	// balance.DefaultPending holds the default value on creation for the pending field.
-	balance.DefaultPending = balanceDescPending.Default.(float64)
-	// balance.PendingValidator is a validator for the "pending" field. It is called by the builders before save.
-	balance.PendingValidator = balanceDescPending.Validators[0].(func(float64) error)
+	// balanceDescLocked is the schema descriptor for locked field.
+	balanceDescLocked := balanceFields[2].Descriptor()
+	// balance.DefaultLocked holds the default value on creation for the locked field.
+	balance.DefaultLocked = balanceDescLocked.Default.(float64)
+	// balance.LockedValidator is a validator for the "locked" field. It is called by the builders before save.
+	balance.LockedValidator = balanceDescLocked.Validators[0].(func(float64) error)
 	// balanceDescID is the schema descriptor for id field.
 	balanceDescID := balanceFields[0].Descriptor()
 	// balance.IDValidator is a validator for the "id" field. It is called by the builders before save.

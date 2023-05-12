@@ -67,9 +67,9 @@ func Balance(v float64) predicate.Balance {
 	return predicate.Balance(sql.FieldEQ(FieldBalance, v))
 }
 
-// Pending applies equality check predicate on the "pending" field. It's identical to PendingEQ.
-func Pending(v float64) predicate.Balance {
-	return predicate.Balance(sql.FieldEQ(FieldPending, v))
+// Locked applies equality check predicate on the "locked" field. It's identical to LockedEQ.
+func Locked(v float64) predicate.Balance {
+	return predicate.Balance(sql.FieldEQ(FieldLocked, v))
 }
 
 // BalanceEQ applies the EQ predicate on the "balance" field.
@@ -112,44 +112,44 @@ func BalanceLTE(v float64) predicate.Balance {
 	return predicate.Balance(sql.FieldLTE(FieldBalance, v))
 }
 
-// PendingEQ applies the EQ predicate on the "pending" field.
-func PendingEQ(v float64) predicate.Balance {
-	return predicate.Balance(sql.FieldEQ(FieldPending, v))
+// LockedEQ applies the EQ predicate on the "locked" field.
+func LockedEQ(v float64) predicate.Balance {
+	return predicate.Balance(sql.FieldEQ(FieldLocked, v))
 }
 
-// PendingNEQ applies the NEQ predicate on the "pending" field.
-func PendingNEQ(v float64) predicate.Balance {
-	return predicate.Balance(sql.FieldNEQ(FieldPending, v))
+// LockedNEQ applies the NEQ predicate on the "locked" field.
+func LockedNEQ(v float64) predicate.Balance {
+	return predicate.Balance(sql.FieldNEQ(FieldLocked, v))
 }
 
-// PendingIn applies the In predicate on the "pending" field.
-func PendingIn(vs ...float64) predicate.Balance {
-	return predicate.Balance(sql.FieldIn(FieldPending, vs...))
+// LockedIn applies the In predicate on the "locked" field.
+func LockedIn(vs ...float64) predicate.Balance {
+	return predicate.Balance(sql.FieldIn(FieldLocked, vs...))
 }
 
-// PendingNotIn applies the NotIn predicate on the "pending" field.
-func PendingNotIn(vs ...float64) predicate.Balance {
-	return predicate.Balance(sql.FieldNotIn(FieldPending, vs...))
+// LockedNotIn applies the NotIn predicate on the "locked" field.
+func LockedNotIn(vs ...float64) predicate.Balance {
+	return predicate.Balance(sql.FieldNotIn(FieldLocked, vs...))
 }
 
-// PendingGT applies the GT predicate on the "pending" field.
-func PendingGT(v float64) predicate.Balance {
-	return predicate.Balance(sql.FieldGT(FieldPending, v))
+// LockedGT applies the GT predicate on the "locked" field.
+func LockedGT(v float64) predicate.Balance {
+	return predicate.Balance(sql.FieldGT(FieldLocked, v))
 }
 
-// PendingGTE applies the GTE predicate on the "pending" field.
-func PendingGTE(v float64) predicate.Balance {
-	return predicate.Balance(sql.FieldGTE(FieldPending, v))
+// LockedGTE applies the GTE predicate on the "locked" field.
+func LockedGTE(v float64) predicate.Balance {
+	return predicate.Balance(sql.FieldGTE(FieldLocked, v))
 }
 
-// PendingLT applies the LT predicate on the "pending" field.
-func PendingLT(v float64) predicate.Balance {
-	return predicate.Balance(sql.FieldLT(FieldPending, v))
+// LockedLT applies the LT predicate on the "locked" field.
+func LockedLT(v float64) predicate.Balance {
+	return predicate.Balance(sql.FieldLT(FieldLocked, v))
 }
 
-// PendingLTE applies the LTE predicate on the "pending" field.
-func PendingLTE(v float64) predicate.Balance {
-	return predicate.Balance(sql.FieldLTE(FieldPending, v))
+// LockedLTE applies the LTE predicate on the "locked" field.
+func LockedLTE(v float64) predicate.Balance {
+	return predicate.Balance(sql.FieldLTE(FieldLocked, v))
 }
 
 // And groups predicates with the AND operator between them.

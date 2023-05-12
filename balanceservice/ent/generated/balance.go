@@ -18,8 +18,8 @@ type Balance struct {
 	ID string `json:"id,omitempty"`
 	// Balance holds the value of the "balance" field.
 	Balance float64 `json:"balance,omitempty"`
-	// Pending holds the value of the "pending" field.
-	Pending      float64 `json:"pending,omitempty"`
+	// Locked holds the value of the "locked" field.
+	Locked       float64 `json:"locked,omitempty"`
 	selectValues sql.SelectValues
 }
 
@@ -28,7 +28,7 @@ func (*Balance) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case balance.FieldBalance, balance.FieldPending:
+		case balance.FieldBalance, balance.FieldLocked:
 			values[i] = new(sql.NullFloat64)
 		case balance.FieldID:
 			values[i] = new(sql.NullString)
@@ -59,11 +59,11 @@ func (b *Balance) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				b.Balance = value.Float64
 			}
-		case balance.FieldPending:
+		case balance.FieldLocked:
 			if value, ok := values[i].(*sql.NullFloat64); !ok {
-				return fmt.Errorf("unexpected type %T for field pending", values[i])
+				return fmt.Errorf("unexpected type %T for field locked", values[i])
 			} else if value.Valid {
-				b.Pending = value.Float64
+				b.Locked = value.Float64
 			}
 		default:
 			b.selectValues.Set(columns[i], values[i])
@@ -104,8 +104,8 @@ func (b *Balance) String() string {
 	builder.WriteString("balance=")
 	builder.WriteString(fmt.Sprintf("%v", b.Balance))
 	builder.WriteString(", ")
-	builder.WriteString("pending=")
-	builder.WriteString(fmt.Sprintf("%v", b.Pending))
+	builder.WriteString("locked=")
+	builder.WriteString(fmt.Sprintf("%v", b.Locked))
 	builder.WriteByte(')')
 	return builder.String()
 }

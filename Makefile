@@ -27,19 +27,24 @@ BALANCE_DB_DATASOURCE=file:localdev/sqlitedata/main.db
 seed:
 	sudo chmod 0666 localdev/sqlitedata/main.db
 	BALANCE_DB_DRIVER=$(BALANCE_DB_DRIVER) BALANCE_DB_DATASOURCE=$(BALANCE_DB_DATASOURCE) go run balanceservice/seed/main.go
-	
+
+
+GATEWAY_ADDR=localhost:3000
+test-inittransfer:
+	curl -v http://$(GATEWAY_ADDR)/inittransfer?srcAcc=$(SRCACC)\&dstAcc=$(DSTACC)\&amount=$(AMT)
+
+BALANCE_ADDR=localhost:3012
+test-lock-balance: 
+	curl -X POST http://$(BALANCE_ADDR)/balanceCommand \
+		-d '{"datacontenttype": "application/json", "data": {"command": "lockBalance", "tnx":"TEST$(shell date +%s)","amount":$(AMT), "srcAcc":"$(SRC)", "dstAcc":"$(DST)"}, "topic": "balance", "pubsubname": "balance"}'
+
 # update-dapr-components:
 # 	cp -R components ~/.dapr
 
-PUB_BALANCE_ADDR=localhost:3001
-publish-update-balance: 
-	curl -X POST http://$(PUB_BALANCE_ADDR)/updatebalance \
-		-d '{"datacontenttype": "application/json", "data": {"account":"$(ACC)","amount":$(AMT)}, "topic": "balance", "pubsubname": "updatebalance"}'
-
-PUB_TNX_ADDR=localhost:3001
-publish-debit: 
-	curl -X POST http://$(PUB_TNX_ADDR)/debitsource \
-		-d '{"datacontenttype": "application/json", "data": {"tnx":"$(TNX)","amount":$(AMT), "srcAcc":"$(SRC)", "dstAcc":"$(DST)"}, "topic": "transfer", "pubsubname": "debit-source"}'
-publish-credit: 
-	curl -X POST http://$(PUB_TNX_ADDR)/creditdest \
-		-d '{"datacontenttype": "application/json", "data": {"tnx":"$(TNX)","amount":$(AMT), "srcAcc":"$(SRC)", "dstAcc":"$(DST)"}, "topic": "transfer", "pubsubname": "credit-dest"}'
+# PUB_TNX_ADDR=localhost:3001
+# publish-debit: 
+# 	curl -X POST http://$(PUB_TNX_ADDR)/debitsource \
+# 		-d '{"datacontenttype": "application/json", "data": {"tnx":"$(TNX)","amount":$(AMT), "srcAcc":"$(SRC)", "dstAcc":"$(DST)"}, "topic": "transfer", "pubsubname": "debit-source"}'
+# publish-credit: 
+# 	curl -X POST http://$(PUB_TNX_ADDR)/creditdest \
+# 		-d '{"datacontenttype": "application/json", "data": {"tnx":"$(TNX)","amount":$(AMT), "srcAcc":"$(SRC)", "dstAcc":"$(DST)"}, "topic": "transfer", "pubsubname": "credit-dest"}'

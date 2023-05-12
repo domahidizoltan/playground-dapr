@@ -7,6 +7,7 @@ require (
 	github.com/dapr/go-sdk v1.7.0
 	github.com/google/uuid v1.3.0
 	github.com/mattn/go-sqlite3 v1.14.16
+	github.com/oklog/ulid/v2 v2.1.0
 )
 
 require (

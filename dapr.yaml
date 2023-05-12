@@ -9,9 +9,10 @@ apps:
     appDirPath: ./
     appPort: 3000
     daprHTTPPort: 8000
-    command: ["go","run", "gateway/main.go", "gateway/transfersvc.go"]
+    command: ["go","run", "gateway/main.go", "devMode"]
     env:
       GATEWAY_PORT: 3000
+      GATEWAY_TOPIC_BALANCE: topic.balance
   - appID: balance
     appDirPath: ./
     appPort: 3002
@@ -22,8 +23,22 @@ apps:
       BALANCE_DB_DRIVER: sqlite3
       BALANCE_DB_DATASOURCE: file:localdev/sqlitedata/main.db
       BALANCE_SUBSCRIBER_PORT: 3012
-  - appID: transaction
-    appDirPath: .
-    appPort: 3001
-    daprHTTPPort: 8001
-    command: ["go","run", "transactionservice/main.go"]
+      BALANCE_TOPIC_BALANCE: topic.balance
+      BALANCE_TOPIC_CREDIT_TRANSACTION: topic.credit_transaction
+      BALANCE_TOPIC_DEBIT_TRANSACTION: topic.debit_transaction
+  # - appID: credit-tnx
+  #   appDirPath: .
+  #   appPort: 3001
+  #   daprHTTPPort: 8001
+  #   command: ["go","run", "transactionservice/main.go", "creditMode"]
+  #   env:
+  #     CREDITTNX_TOPIC_BALANCE: topic.balance
+  #     CREDITTNX_TOPIC_CREDIT_TRANSACTION: topic.credit_transaction
+  # - appID: debit-tnx
+  #   appDirPath: .
+  #   appPort: 3001
+  #   daprHTTPPort: 8001
+  #   command: ["go","run", "transactionservice/main.go", "debitMode"]
+  #   env:
+  #     DEBITTNX_TOPIC_BALANCE: topic.balance
+  #     DEBITTNX_TOPIC_DEBIT_TRANSACTION: topic.debit_transaction
