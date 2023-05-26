@@ -14,10 +14,6 @@ var BusinessError error = errors.New("error")
 
 type (
 	CommandType string
-	// UpdateBalance struct {
-	// 	Account string  `json:"account"`
-	// 	Amount  float32 `json:"amount"`
-	// }
 
 	TransferCommand struct {
 		Command CommandType `json:"command"`

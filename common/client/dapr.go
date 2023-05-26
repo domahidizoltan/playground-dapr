@@ -11,6 +11,7 @@ import (
 
 const (
 	subscriberPortKey = "_SUBSCRIBER_PORT"
+	PubsubName        = "pubsub"
 )
 
 type SubscriptionHandler struct {

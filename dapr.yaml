@@ -7,15 +7,15 @@ common:
 apps:
   - appID: gateway
     appDirPath: ./
-    appPort: 3000
-    daprHTTPPort: 8000
+    appPort: 3001
+    daprHTTPPort: 8001
     command: ["go","run", "gateway/main.go", "devMode"]
     env:
-      GATEWAY_PORT: 3000
+      GATEWAY_PORT: 3001
       GATEWAY_TOPIC_BALANCE: topic.balance
-  - appID: balance
+  - appID: balanceservice
     appDirPath: ./
-    appPort: 3002
+    appPort: 3012
     daprHTTPPort: 8002
     command: ["go","run", "balanceservice/main.go"]
     env:
@@ -26,19 +26,23 @@ apps:
       BALANCE_TOPIC_BALANCE: topic.balance
       BALANCE_TOPIC_CREDIT_TRANSACTION: topic.credit_transaction
       BALANCE_TOPIC_DEBIT_TRANSACTION: topic.debit_transaction
-  # - appID: credit-tnx
-  #   appDirPath: .
-  #   appPort: 3001
-  #   daprHTTPPort: 8001
-  #   command: ["go","run", "transactionservice/main.go", "creditMode"]
-  #   env:
-  #     CREDITTNX_TOPIC_BALANCE: topic.balance
-  #     CREDITTNX_TOPIC_CREDIT_TRANSACTION: topic.credit_transaction
-  # - appID: debit-tnx
-  #   appDirPath: .
-  #   appPort: 3001
-  #   daprHTTPPort: 8001
-  #   command: ["go","run", "transactionservice/main.go", "debitMode"]
-  #   env:
-  #     DEBITTNX_TOPIC_BALANCE: topic.balance
-  #     DEBITTNX_TOPIC_DEBIT_TRANSACTION: topic.debit_transaction
+  - appID: debit-tnx
+    appDirPath: .
+    appPort: 3013
+    daprHTTPPort: 8003
+    command: ["go","run", "transactionservice/main.go", "debit"]
+    env:
+      DEBITTNX_PORT: 3003
+      DEBITTNX_SUBSCRIBER_PORT: 3013
+      DEBITTNX_TOPIC_BALANCE: topic.balance
+      DEBITTNX_TOPIC_DEBIT_TRANSACTION: topic.debit_transaction
+  - appID: credit-tnx
+    appDirPath: .
+    appPort: 3014
+    daprHTTPPort: 8004
+    command: ["go","run", "transactionservice/main.go", "credit"]
+    env:
+      CREDITTNX_PORT: 3004
+      CREDITTNX_SUBSCRIBER_PORT: 3014
+      CREDITTNX_TOPIC_BALANCE: topic.balance
+      CREDITTNX_TOPIC_CREDIT_TRANSACTION: topic.credit_transaction

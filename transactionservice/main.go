@@ -28,21 +28,21 @@ const (
 )
 
 var (
-	appMode                                                       appModeType
-	pubsubName, debitTopicName, creditTopicName, balanceTopicName string
-	service                                                       string
+	appMode                                           appModeType
+	debitTopicName, creditTopicName, balanceTopicName string
+	service                                           string
 
 	entClient     *entGen.Client
 	daprClient    dapr.Client
 	subscriptions = map[appModeType]*common.Subscription{
 		debitAppModeType: {
-			PubsubName: "DEBIT_TRANSACTION_PUBSUB",
-			Topic:      debitTopicName,
+			PubsubName: client.PubsubName,
+			Topic:      "",
 			Route:      "/debitSourceCommand",
 		},
 		creditAppModeType: {
-			PubsubName: "DEBIT_TRANSACTION_PUBSUB",
-			Topic:      creditTopicName,
+			PubsubName: client.PubsubName,
+			Topic:      "",
 			Route:      "/creditDestCommand",
 		},
 	}
@@ -60,7 +60,7 @@ func main() {
 		panic(errors.New("unknown appMode"))
 	}
 
-	service = strings.ToUpper(string(appMode)) + "_TRANSACTION"
+	service = strings.ToUpper(string(appMode)) + "TNX"
 
 	entClient = ent.GetClient(service)
 	if entClient == nil {
@@ -74,9 +74,11 @@ func main() {
 	}
 	defer daprClient.Close()
 
-	debitTopicName = helper.GetEnv(strings.ToUpper(service)+"TNX_TOPIC_DEBIT_TRANSACTION", "topic.credit_transaction")
+	debitTopicName = helper.GetEnv(strings.ToUpper(service)+"TNX_TOPIC_DEBIT_TRANSACTION", "topic.debit_transaction")
 	creditTopicName = helper.GetEnv(strings.ToUpper(service)+"TNX_TOPIC_CREDIT_TRANSACTION", "topic.credit_transaction")
 	balanceTopicName = helper.GetEnv(strings.ToUpper(service)+"TNX_TOPIC_BALANCE", "topic.balance")
+	subscriptions[creditAppModeType].Topic = creditTopicName
+	subscriptions[debitAppModeType].Topic = debitTopicName
 
 	subscriptions := []client.SubscriptionHandler{
 		{
@@ -88,6 +90,7 @@ func main() {
 }
 
 func commandHandler(ctx context.Context, event *common.TopicEvent) (bool, error) {
+	log.Println("received", event)
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
@@ -131,7 +134,9 @@ func publishCommand(ctx context.Context, cmd dto.TransferCommand, newCommandType
 	case dto.UpdateSourceBalanceCommandType, dto.UpdateDestBalanceCommandType:
 		topicName = balanceTopicName
 	}
-	if err := daprClient.PublishEvent(ctx, pubsubName, topicName, newCmd); err != nil {
+
+	log.Printf("publish to %s command %+v", topicName, newCmd)
+	if err := daprClient.PublishEvent(ctx, client.PubsubName, topicName, newCmd); err != nil {
 		log.Printf("failed to publish command %v: %s", newCmd, err)
 		return false, err
 	}

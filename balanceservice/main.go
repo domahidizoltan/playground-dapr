@@ -19,8 +19,7 @@ import (
 )
 
 const (
-	service    = "BALANCE"
-	pubsubName = service + "_PUBSUB"
+	service = "BALANCE"
 )
 
 var (
@@ -42,7 +41,7 @@ func lockBalance(ctx context.Context, account string, amount float64) error {
 		return err
 	}
 
-	if acc.Balance < amount {
+	if acc.Balance-acc.Locked < amount {
 		log.Printf("insufficient balance for account %s: %s", account, err)
 		return fmt.Errorf("%w: insufficient balance", dto.BusinessError)
 	}
@@ -78,7 +77,7 @@ func updateBalance(ctx context.Context, account string, amount float64) error {
 		return err
 	}
 
-	log.Printf("updated balance: %v", newBalance)
+	log.Println("updated balance", newBalance)
 	return nil
 }
 
@@ -88,11 +87,13 @@ func publishCommand(ctx context.Context, cmd dto.TransferCommand, newCommandType
 	topicName := ""
 	switch newCommandType {
 	case dto.DebitSourceCommandType:
-		topicName = creditTnxTopicName
-	case dto.CreditDestCommandType:
 		topicName = debitTnxTopicName
+	case dto.CreditDestCommandType:
+		topicName = creditTnxTopicName
 	}
-	if err := daprClient.PublishEvent(ctx, pubsubName, topicName, newCmd); err != nil {
+
+	log.Printf("publish to %s command %+v", topicName, newCmd)
+	if err := daprClient.PublishEvent(ctx, client.PubsubName, topicName, newCmd); err != nil {
 		log.Printf("failed to publish command %v: %s", newCmd, err)
 		return false, err
 	}
@@ -101,6 +102,7 @@ func publishCommand(ctx context.Context, cmd dto.TransferCommand, newCommandType
 }
 
 func commandHandler(ctx context.Context, event *common.TopicEvent) (bool, error) {
+	log.Println("received", event)
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
@@ -139,14 +141,16 @@ func commandHandler(ctx context.Context, event *common.TopicEvent) (bool, error)
 			return true, err
 		}
 
+		//TODO call gateway
+		return false, nil
 	}
 
-	log.Printf("unknown command type: %s", cmd.Command)
+	log.Println("unknown command type", cmd.Command)
 	return false, nil
 }
 
 var balanceSub = &common.Subscription{
-	PubsubName: "balance",
+	PubsubName: client.PubsubName,
 	Topic:      balanceTopicName,
 	Route:      "/balanceCommand",
 }
@@ -158,7 +162,8 @@ func main() {
 	}
 	entClient = *ec
 
-	daprClient, err := dapr.NewClient()
+	var err error
+	daprClient, err = dapr.NewClient()
 	if err != nil {
 		log.Fatalf("failed to init DAPR client: %s", err)
 	}

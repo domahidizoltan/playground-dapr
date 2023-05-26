@@ -1,7 +1,10 @@
 install: install-dapr-cli update-dapr-components
 
+# reinstall-dapr:
+# 	dapr uninstall && dapr init
+
 start-app: stop-app delete-logs
-	dapr run --run-file dapr.yaml &
+	dapr run --resources-path components/ --run-file dapr.yaml &
 
 stop-app:
 	dapr stop --run-file dapr.yaml
@@ -29,17 +32,18 @@ seed:
 	BALANCE_DB_DRIVER=$(BALANCE_DB_DRIVER) BALANCE_DB_DATASOURCE=$(BALANCE_DB_DATASOURCE) go run balanceservice/seed/main.go
 
 
-GATEWAY_ADDR=localhost:3000
+GATEWAY_ADDR=localhost:3001
 test-inittransfer:
 	curl -v http://$(GATEWAY_ADDR)/inittransfer?srcAcc=$(SRCACC)\&dstAcc=$(DSTACC)\&amount=$(AMT)
 
 BALANCE_ADDR=localhost:3012
 test-lock-balance: 
 	curl -X POST http://$(BALANCE_ADDR)/balanceCommand \
-		-d '{"datacontenttype": "application/json", "data": {"command": "lockBalance", "tnx":"TEST$(shell date +%s)","amount":$(AMT), "srcAcc":"$(SRC)", "dstAcc":"$(DST)"}, "topic": "balance", "pubsubname": "balance"}'
+		-d '{"datacontenttype": "application/json", "data": {"command": "lockBalance", "tnx":"TEST$(shell date +%s)","amount":$(AMT), "srcAcc":"$(SRC)", "dstAcc":"$(DST)"}, "topic": "topic.balance", "pubsubname": "pubsub"}'
+# dapr publish --publish-app-id <registeredApp> --pubsub pubsub --topic topic.balance --data '{"test":"test"}'
 
-# update-dapr-components:
-# 	cp -R components ~/.dapr
+update-dapr-components:
+	cp -R components ~/.dapr
 
 # PUB_TNX_ADDR=localhost:3001
 # publish-debit: 

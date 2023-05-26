@@ -10,6 +10,7 @@ import (
 	"strconv"
 
 	dapr "github.com/dapr/go-sdk/client"
+	"github.com/domahidizoltan/playground-dapr/common/client"
 	"github.com/domahidizoltan/playground-dapr/common/dto"
 	"github.com/domahidizoltan/playground-dapr/common/helper"
 	"github.com/domahidizoltan/playground-dapr/common/model"
@@ -17,8 +18,7 @@ import (
 )
 
 const (
-	service    = "GATEWAY"
-	pubsubName = service + "_PUBSUB"
+	service = "GATEWAY"
 
 	srcAccQuery = "srcAcc"
 	dstAccQuery = "dstAcc"
@@ -88,7 +88,7 @@ func initTransferHandler(w http.ResponseWriter, r *http.Request) {
 		Amount:  amount,
 	}
 
-	if err := daprClient.PublishEvent(r.Context(), "balance", balanceTopic, cmd); err != nil {
+	if err := daprClient.PublishEvent(r.Context(), client.PubsubName, balanceTopic, cmd); err != nil {
 		helper.HttpError(w, http.StatusBadRequest, "failed to publish command", err)
 		return
 	}
