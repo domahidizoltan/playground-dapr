@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -18,7 +19,9 @@ import (
 )
 
 const (
-	service = "GATEWAY"
+	service              = "GATEWAY"
+	configStore          = "configstore"
+	minTransferAmountKey = "min_transfer_amount"
 
 	srcAccQuery = "srcAcc"
 	dstAccQuery = "dstAcc"
@@ -30,7 +33,8 @@ var (
 	ErrInvalidAccount = errors.New("invalid account")
 	ErrInvalidAmount  = errors.New("invalid amount")
 
-	daprClient dapr.Client
+	daprClient        dapr.Client
+	minTransferAmount = float64(10)
 )
 
 func validateParams(srcAcc, dstAcc string, amount float64) error {
@@ -75,6 +79,11 @@ func initTransferHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if amount < minTransferAmount {
+		helper.HttpError(w, http.StatusBadRequest, "", fmt.Errorf("amount must be min %.f", minTransferAmount))
+		return
+	}
+
 	if err := validateParams(params[srcAccQuery], params[dstAccQuery], amount); err != nil {
 		helper.HttpError(w, http.StatusBadRequest, "invalid parameters", err)
 		return
@@ -115,6 +124,8 @@ func main() {
 	}
 	defer daprClient.Close()
 
+	go setConfigs()
+
 	isDevMode := len(os.Args) > 1 && os.Args[1] == "devMode"
 
 	if isDevMode {
@@ -129,4 +140,34 @@ func main() {
 		finalizeCompletedTransfers()
 		initIncomingTransfers()
 	}
+}
+
+func setConfigs() {
+	updateMinTransferAmount := func(cfg *dapr.ConfigurationItem) {
+		var err error
+		minTransferAmount, err = strconv.ParseFloat(cfg.Value, 64)
+		if err != nil {
+			log.Printf("failed to update config %s: %s", minTransferAmountKey, err)
+		}
+
+		log.Printf("updated config %s to %f", minTransferAmountKey, minTransferAmount)
+	}
+
+	cfg, err := daprClient.GetConfigurationItem(context.TODO(), configStore, minTransferAmountKey)
+	if err != nil {
+		log.Println("failed to get config", err)
+	}
+	updateMinTransferAmount(cfg)
+
+	if err := daprClient.SubscribeConfigurationItems(context.TODO(), configStore, []string{minTransferAmountKey}, func(s string, m map[string]*dapr.ConfigurationItem) {
+		cfg, ok := m[minTransferAmountKey]
+		if !ok {
+			log.Printf("%s config not found, using the current value %.f", minTransferAmountKey, minTransferAmount)
+			return
+		}
+		updateMinTransferAmount(cfg)
+	}); err != nil {
+		log.Println("failed to get config", err)
+	}
+
 }

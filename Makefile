@@ -31,6 +31,8 @@ seed:
 	sudo chmod 0666 localdev/sqlitedata/main.db
 	BALANCE_DB_DRIVER=$(BALANCE_DB_DRIVER) BALANCE_DB_DATASOURCE=$(BALANCE_DB_DATASOURCE) go run balanceservice/seed/main.go
 
+config-min-transfer-amount:
+	docker exec dapr_redis redis-cli MSET min_transfer_amount "$(AMT)"
 
 GATEWAY_ADDR=localhost:3001
 test-inittransfer:
