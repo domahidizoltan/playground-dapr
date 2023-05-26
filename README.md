@@ -13,33 +13,39 @@ adminer: localhost:8080
 ```
 
 Plan:
-<details>
-<summary>Plant UML</summary>
 
-```puml
-@startuml
-inputfile : new transactions
-outputfile : copleted transactions
-debitTnx : debit source
-creditTnx : credit destination
+```mermaid
+flowchart TB
+    classDef blue stroke:blue;
 
-[*] --> inputfile
-inputfile -left> gateway
-gateway -[#blue]-> balance : lock amount and init transfer
-balance -down[#blue]-> statestore : PENDING[1]
-balance -left[dashed,#orange]> debitTnx : topic.debit_source
+    inputfile["inputfile\nnew transactions"]
+    outputfile["outputfile\ncopleted transactions"]
+    debitTnx["debitTnx\ndebit source"]
+    creditTnx["creditTnx\ncredit destination"]
 
-debitTnx -[dashed,#orange]> balance : topic.update_source_balance
+    start --> inputfile
+    inputfile --> gateway
+    gateway -.->|lock amount and init transfer\ntopic.balance| balance
+    balance -->|"PENDING[1]"| statestore
+    linkStyle 2 stroke:blue,fill:blue;
+    linkStyle 3 stroke:blue;
 
-balance -right[dashed,#green]> creditTnx : topic.credit_destination
-creditTnx -[dashed,#green]> balance : topic.update_destination_balance
-balance -[#green]> statestore : COMPLETED[4]
+    balance -.->|topic.debit_transaction| debitTnx
+    debitTnx -.->|topic.balance| balance
+    linkStyle 4 stroke:orange;
+    linkStyle 5 stroke:orange;
 
-statestore -[#red]> gateway
-gateway -[#red]-> outputfile
-outputfile -[#red]-> [*]
-@enduml
+    balance -.->|topic.credit_transaction| creditTnx
+    creditTnx -.->|topic.balance| balance
+    balance -->|"COMPLETED[4]"| statestore
+    linkStyle 6 stroke:green;
+    linkStyle 7 stroke:green;
+    linkStyle 8 stroke:green;
+
+    statestore --> gateway
+    gateway --> outputfile
+    outputfile --> X[end]
+    linkStyle 9 stroke:red
+    linkStyle 10 stroke:red
+    linkStyle 11 stroke:red
 ```
-</details>
-
-![plan](http://www.plantuml.com/plantuml/svg/TL9DQm8n4BtdLmIybQPGwAa74QgKGcizU5iMYScuXiPaoKwm_VUTrKrd5-d98U_3DszdqQ5Ec4zUkD1cF3WFyba6E4jCEdJQe8kX4p4ZeoQs7X3ib69Xxt0Rlebm6MKNSp8WJ09RWEjCU8Skw5udH7LNIwNcyk__HqcKXmFEPQCHplf73BzILREzpr2JQg-z3WR8sqVp9VKfve1I1qj-3gy93v14uIaRpu7bj3rIc9XwXyrglNnRlrQFDTFx09NLtH7i_IoIMmFrN8vsnTWwyt1vs0qRSnNgLbgSYpAtLYCCqjs02WwGN7Fa14q22EJ2fHQVwyjkN2sJrDJWtnXZUSd2KQgYdjRsylcnULzjLylggHQ2eLwGmDQttsy0g7--Ay7Z2AVZ40i8bWxq5m00)
