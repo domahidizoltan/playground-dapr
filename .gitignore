@@ -1,6 +1,7 @@
 .vscode
 
 tmp/
+transferfiles
 bin/
 .dapr/
 localdev/sqlitedata/

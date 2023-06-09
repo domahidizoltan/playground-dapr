@@ -26,9 +26,10 @@ var (
 	entClient  entGen.Client
 	daprClient dapr.Client
 
-	balanceTopicName   = helper.GetEnv(service+"_TOPIC_BALANCE", "topic.balance")
-	creditTnxTopicName = helper.GetEnv(service+"_TOPIC_CREDIT_TRANSACTION", "topic.credit_transaction")
-	debitTnxTopicName  = helper.GetEnv(service+"_TOPIC_DEBIT_TRANSACTION", "topic.debit_transaction")
+	balanceTopicName      = helper.GetEnv(service+"_TOPIC_BALANCE", "topic.balance")
+	creditTnxTopicName    = helper.GetEnv(service+"_TOPIC_CREDIT_TRANSACTION", "topic.credit_transaction")
+	debitTnxTopicName     = helper.GetEnv(service+"_TOPIC_DEBIT_TRANSACTION", "topic.debit_transaction")
+	completedTnxTopicName = helper.GetEnv(service+"_TOPIC_COMPLETED_TRANSACTION", "topic.completed_transaction")
 )
 
 func lockBalance(ctx context.Context, account string, amount float64) error {
@@ -141,7 +142,13 @@ func commandHandler(ctx context.Context, event *common.TopicEvent) (bool, error)
 			return true, err
 		}
 
-		//TODO call gateway
+		newCmd := cmd
+		newCmd.Command = dto.CompletedCommandType
+		log.Printf("publish to %s command %+v", completedTnxTopicName, newCmd)
+		if err := daprClient.PublishEvent(ctx, client.PubsubName, completedTnxTopicName, newCmd); err != nil {
+			log.Printf("failed to publish command %v: %s", newCmd, err)
+			return false, err
+		}
 		return false, nil
 	}
 
@@ -175,5 +182,5 @@ func main() {
 			Handler:      commandHandler,
 		},
 	}
-	client.SubscribeTopic(service, subscriptions)
+	client.SubscribeTopic(service, subscriptions, nil)
 }

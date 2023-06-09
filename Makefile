@@ -54,3 +54,12 @@ update-dapr-components:
 # publish-credit: 
 # 	curl -X POST http://$(PUB_TNX_ADDR)/creditdest \
 # 		-d '{"datacontenttype": "application/json", "data": {"tnx":"$(TNX)","amount":$(AMT), "srcAcc":"$(SRC)", "dstAcc":"$(DST)"}, "topic": "transfer", "pubsubname": "credit-dest"}'
+
+path=transferfiles/newtransfers_$(shell date -u +%y%m%d%H).csv
+schedule-transfer: ## append record to transfer schedule file > make schedule-transfer SRC=ACC000 DST=ACC001 AMT=100
+	$(shell if [ ! -f $(path) ]; then echo "source_acc,dest_acc,amount,created_at" > $(path); fi)
+	@echo "$(SRC),$(DST),$(AMT),$(shell date -u --iso-8601=seconds)" >> $(path)
+
+
+help:
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'

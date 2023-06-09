@@ -19,10 +19,13 @@ type SubscriptionHandler struct {
 	Handler      common.TopicEventHandler
 }
 
-func SubscribeTopic(servicePrefix string, subscriptions []SubscriptionHandler) {
+func SubscribeTopic(servicePrefix string, subscriptions []SubscriptionHandler, serviceHook func(s common.Service)) {
 	port := helper.GetEnv(servicePrefix+subscriberPortKey, "3001")
 	log.Printf("starting subscription service %s on port %s", servicePrefix, port)
 	s := daprd.NewService(":" + port)
+	if serviceHook != nil {
+		serviceHook(s)
+	}
 
 	for _, sub := range subscriptions {
 		if err := s.AddTopicEventHandler(sub.Subscription, sub.Handler); err != nil {

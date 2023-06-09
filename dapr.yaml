@@ -7,12 +7,14 @@ common:
 apps:
   - appID: gateway
     appDirPath: ./
-    appPort: 3001
+    appPort: 3011
     daprHTTPPort: 8001
     command: ["go","run", "gateway/main.go", "devMode"]
     env:
       GATEWAY_PORT: 3001
+      GATEWAY_SUBSCRIBER_PORT: 3011
       GATEWAY_TOPIC_BALANCE: topic.balance
+      GATEWAY_TOPIC_COMPLETED_TRANSACTION: topic.completed_transaction
   - appID: balanceservice
     appDirPath: ./
     appPort: 3012
@@ -26,6 +28,7 @@ apps:
       BALANCE_TOPIC_BALANCE: topic.balance
       BALANCE_TOPIC_CREDIT_TRANSACTION: topic.credit_transaction
       BALANCE_TOPIC_DEBIT_TRANSACTION: topic.debit_transaction
+      BALANCE_TOPIC_COMPLETED_TRANSACTION: topic.completed_transaction
   - appID: debit-tnx
     appDirPath: .
     appPort: 3013

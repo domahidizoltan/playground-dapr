@@ -8,6 +8,7 @@ const (
 	UpdateSourceBalanceCommandType CommandType = "updateSourceBalance"
 	CreditDestCommandType          CommandType = "creditDest"
 	UpdateDestBalanceCommandType   CommandType = "updateDestBalance"
+	CompletedCommandType           CommandType = "completed"
 )
 
 var BusinessError error = errors.New("error")

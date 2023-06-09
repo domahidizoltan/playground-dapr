@@ -86,7 +86,7 @@ func main() {
 			Handler:      commandHandler,
 		},
 	}
-	client.SubscribeTopic(service, subscriptions)
+	client.SubscribeTopic(service, subscriptions, nil)
 }
 
 func commandHandler(ctx context.Context, event *common.TopicEvent) (bool, error) {

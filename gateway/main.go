@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/csv"
 	"errors"
 	"fmt"
 	"log"
@@ -9,8 +10,10 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"time"
 
 	dapr "github.com/dapr/go-sdk/client"
+	"github.com/dapr/go-sdk/service/common"
 	"github.com/domahidizoltan/playground-dapr/common/client"
 	"github.com/domahidizoltan/playground-dapr/common/dto"
 	"github.com/domahidizoltan/playground-dapr/common/helper"
@@ -19,9 +22,12 @@ import (
 )
 
 const (
-	service              = "GATEWAY"
-	configStore          = "configstore"
-	minTransferAmountKey = "min_transfer_amount"
+	service                      = "GATEWAY"
+	configStore                  = "configstore"
+	minTransferAmountKey         = "min_transfer_amount"
+	transferFilesPath            = "transferfiles"
+	scheduledTransfersPathFormat = transferFilesPath + "/newtransfers_%s.csv"
+	completedTransfersPathFormat = transferFilesPath + "/completedtransfers_%s.csv"
 
 	srcAccQuery = "srcAcc"
 	dstAccQuery = "dstAcc"
@@ -29,13 +35,20 @@ const (
 )
 
 var (
-	balanceTopic      = helper.GetEnv("GATEWAY_TOPIC_BALANCE", "topic.balance")
+	balanceTopic      = helper.GetEnv(service+"_TOPIC_BALANCE", "topic.balance")
+	completedTnxTopic = helper.GetEnv(service+"_TOPIC_COMPLETED_TRANSACTION", "topic.completed_transaction")
 	ErrInvalidAccount = errors.New("invalid account")
 	ErrInvalidAmount  = errors.New("invalid amount")
 
 	daprClient        dapr.Client
 	minTransferAmount = float64(10)
 )
+
+var completedTnxSub = &common.Subscription{
+	PubsubName: client.PubsubName,
+	Topic:      completedTnxTopic,
+	Route:      "/completedTransaction",
+}
 
 func validateParams(srcAcc, dstAcc string, amount float64) error {
 	if !isValidAccount(srcAcc) {
@@ -73,53 +86,120 @@ func initTransferHandler(w http.ResponseWriter, r *http.Request) {
 		params[key] = value
 	}
 
-	amount, err := strconv.ParseFloat(params[amountQuery], 32)
+	if err := initTransfer(r.Context(), params[srcAccQuery], params[dstAccQuery], params[amountQuery]); err != nil {
+		e := errors.Unwrap(err)
+		helper.HttpError(w, http.StatusBadRequest, err.Error(), e)
+		return
+	}
+
+	w.WriteHeader(http.StatusAccepted)
+}
+
+func initTransfer(ctx context.Context, srcAcc, dstAcc, amount string) error {
+	amt, err := strconv.ParseFloat(amount, 32)
 	if err != nil {
-		helper.HttpError(w, http.StatusBadRequest, "failed to parse amount", err)
-		return
+		return fmt.Errorf("failed to parse amount %w", err)
 	}
 
-	if amount < minTransferAmount {
-		helper.HttpError(w, http.StatusBadRequest, "", fmt.Errorf("amount must be min %.f", minTransferAmount))
-		return
+	if amt < minTransferAmount {
+		return fmt.Errorf("amount must be min %.f", minTransferAmount)
 	}
 
-	if err := validateParams(params[srcAccQuery], params[dstAccQuery], amount); err != nil {
-		helper.HttpError(w, http.StatusBadRequest, "invalid parameters", err)
-		return
+	if err := validateParams(srcAcc, dstAcc, amt); err != nil {
+		return fmt.Errorf("invalid parameters %w", err)
 	}
 
 	cmd := dto.TransferCommand{
 		Command: dto.LockBalanceCommandType,
 		Tnx:     ulid.Make().String(),
-		SrcAcc:  params[srcAccQuery],
-		DstAcc:  params[dstAccQuery],
-		Amount:  amount,
+		SrcAcc:  srcAcc,
+		DstAcc:  dstAcc,
+		Amount:  amt,
 	}
 
-	if err := daprClient.PublishEvent(r.Context(), client.PubsubName, balanceTopic, cmd); err != nil {
-		helper.HttpError(w, http.StatusBadRequest, "failed to publish command", err)
-		return
+	if err := daprClient.PublishEvent(ctx, client.PubsubName, balanceTopic, cmd); err != nil {
+		return fmt.Errorf("failed to publish command %w", err)
 	}
 
 	log.Printf("request transfer %+v:", cmd)
-	w.WriteHeader(http.StatusAccepted)
+	return nil
 }
 
 func checkNewTransfers(w http.ResponseWriter, r *http.Request) {
-	go initIncomingTransfers()
-	go finalizeCompletedTransfers()
-	w.WriteHeader(http.StatusOK)
+	go processScheduledTransfers()
+	if w != nil {
+		w.WriteHeader(http.StatusOK)
+	}
 }
 
-func initIncomingTransfers() {
-	log.Println("init incoming transfers")
-	//TODO
+func processScheduledTransfers() {
+	path := fmt.Sprintf(scheduledTransfersPathFormat, time.Now().UTC().Format("06010215"))
+	log.Println("process sheduled transfers from", path)
+
+	file, err := os.Open(path)
+	defer func() {
+		if err := file.Close(); err != nil {
+			log.Printf("failed to close file %s: %s", path, err.Error())
+		}
+	}()
+
+	if err != nil {
+		log.Printf("failed to read file %s: %s", path, err.Error())
+		return
+	}
+
+	reader := csv.NewReader(file)
+	records, err := reader.ReadAll()
+	if err != nil {
+		log.Println("failed to read records", err.Error())
+		return
+	}
+
+	for _, record := range records[1:] {
+		if err := initTransfer(context.TODO(), record[0], record[1], record[2]); err != nil {
+			log.Printf("failed to init transfer for record %+v: %+s", record, err.Error())
+		}
+	}
 }
 
-func finalizeCompletedTransfers() {
-	log.Println("finalize completed transfers")
-	//TODO
+func completedTransfersHandler(ctx context.Context, event *common.TopicEvent) (bool, error) {
+	log.Println("received", event)
+
+	var cmd *dto.TransferCommand
+	if err := event.Struct(&cmd); err != nil {
+		log.Printf("failed to parse TransferCommand for %s: %s", string(event.RawData), err)
+		return true, err
+	}
+
+	path := fmt.Sprintf(completedTransfersPathFormat, time.Now().UTC().Format("06010215"))
+	file, err := os.OpenFile(path, os.O_APPEND|os.O_RDWR, os.ModeAppend)
+	if err != nil {
+		if os.IsNotExist(err) {
+			if err := os.WriteFile(path, []byte("source_acc,dest_acc,amount,tnx,completed_at\n"), 0777); err != nil {
+				log.Printf("failed to create file %s: %s", path, err.Error())
+				return true, err
+			}
+		} else {
+			log.Printf("failed to open file %s: %s", path, err)
+			return true, err
+		}
+	}
+
+	record := []string{cmd.SrcAcc, cmd.DstAcc, fmt.Sprintf("%.2f", cmd.Amount), cmd.Tnx, time.Now().UTC().Format(time.RFC3339)}
+	log.Println("writing record", record)
+	writer := csv.NewWriter(file)
+	if err := writer.Write(record); err != nil {
+		log.Printf("failed to write record %s: %s", record, err.Error())
+		return true, err
+	}
+
+	writer.Flush()
+	if err := writer.Error(); err != nil {
+		log.Printf("failed to flush data: %s", err.Error())
+		return true, err
+	}
+
+	return false, nil
 }
 
 func main() {
@@ -131,6 +211,21 @@ func main() {
 	defer daprClient.Close()
 
 	go setConfigs()
+
+	subscriptions := []client.SubscriptionHandler{
+		{
+			Subscription: completedTnxSub,
+			Handler:      completedTransfersHandler,
+		},
+	}
+
+	serviceHook := func(s common.Service) {
+		s.AddBindingInvocationHandler("checknewtransfers", func(ctx context.Context, in *common.BindingEvent) (out []byte, err error) {
+			checkNewTransfers(nil, nil)
+			return []byte("{\"status\":200}"), nil
+		})
+	}
+	go client.SubscribeTopic(service, subscriptions, serviceHook)
 
 	isDevMode := len(os.Args) > 1 && os.Args[1] == "devMode"
 	if isDevMode {
