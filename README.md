@@ -49,3 +49,14 @@ flowchart TB
     linkStyle 10 stroke:red
     linkStyle 11 stroke:red
 ```
+
+
+TODO:
+- setup k0s cluster
+- install redis, nats, postgres, vault?, grafana? with helm
+- port dapr app to k8s
+- scale to zero with keda.sh
+- check how to debug with Bridge to k8s/dapr
+- check grafana loki/tempo
+- check debezium
+
