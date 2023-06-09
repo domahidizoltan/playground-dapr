@@ -5,11 +5,13 @@ import (
 	"encoding/csv"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	dapr "github.com/dapr/go-sdk/client"
@@ -22,12 +24,14 @@ import (
 )
 
 const (
-	service                      = "GATEWAY"
-	configStore                  = "configstore"
-	minTransferAmountKey         = "min_transfer_amount"
-	transferFilesPath            = "transferfiles"
-	scheduledTransfersPathFormat = transferFilesPath + "/newtransfers_%s.csv"
-	completedTransfersPathFormat = transferFilesPath + "/completedtransfers_%s.csv"
+	service                       = "GATEWAY"
+	configStore                   = "configstore"
+	stateStore                    = "statestore"
+	minTransferAmountKey          = "min_transfer_amount"
+	lastScheduledTransferIndexKey = "last_scheduled_transfer_index"
+	transferFilesPath             = "transferfiles"
+	scheduledTransfersPathFormat  = transferFilesPath + "/newtransfers_%s.csv"
+	completedTransfersPathFormat  = transferFilesPath + "/completedtransfers_%s.csv"
 
 	srcAccQuery = "srcAcc"
 	dstAccQuery = "dstAcc"
@@ -133,11 +137,17 @@ func checkNewTransfers(w http.ResponseWriter, r *http.Request) {
 }
 
 func processScheduledTransfers() {
+	lastScheduledTransferIndex := 0
 	path := fmt.Sprintf(scheduledTransfersPathFormat, time.Now().UTC().Format("06010215"))
 	log.Println("process sheduled transfers from", path)
 
 	file, err := os.Open(path)
 	defer func() {
+		indexState := fmt.Sprintf("%s#%d", path, lastScheduledTransferIndex)
+		if err := daprClient.SaveState(context.TODO(), stateStore, lastScheduledTransferIndexKey, []byte(indexState), nil); err != nil {
+			log.Printf("failed to save state for %s: %s", lastScheduledTransferIndexKey, err.Error())
+		}
+
 		if err := file.Close(); err != nil {
 			log.Printf("failed to close file %s: %s", path, err.Error())
 		}
@@ -148,6 +158,24 @@ func processScheduledTransfers() {
 		return
 	}
 
+	item, err := daprClient.GetState(context.TODO(), stateStore, lastScheduledTransferIndexKey, nil)
+	if err != nil {
+		log.Printf("failed to get state %s: %s", lastScheduledTransferIndexKey, err)
+	} else {
+		cfg := strings.Split(string(item.Value), "#")
+		if cfg[0] == path {
+			var err error
+			lastScheduledTransferIndex, err = strconv.Atoi(cfg[1])
+			if err != nil {
+				log.Printf("failed to parse index for %s %s: %s", lastScheduledTransferIndexKey, cfg[1], err.Error())
+			}
+		}
+	}
+
+	if _, err := file.Seek(int64(1+lastScheduledTransferIndex), io.SeekStart); err != nil {
+		log.Printf("failed to seek file %s to index %d: %s", path, 1+lastScheduledTransferIndex, err.Error())
+	}
+
 	reader := csv.NewReader(file)
 	records, err := reader.ReadAll()
 	if err != nil {
@@ -155,9 +183,12 @@ func processScheduledTransfers() {
 		return
 	}
 
-	for _, record := range records[1:] {
-		if err := initTransfer(context.TODO(), record[0], record[1], record[2]); err != nil {
-			log.Printf("failed to init transfer for record %+v: %+s", record, err.Error())
+	if 1+lastScheduledTransferIndex < len(records) {
+		for _, record := range records[1+lastScheduledTransferIndex:] {
+			if err := initTransfer(context.TODO(), record[0], record[1], record[2]); err != nil {
+				log.Printf("failed to init transfer for record %+v: %+s", record, err.Error())
+			}
+			lastScheduledTransferIndex++
 		}
 	}
 }
