@@ -106,6 +106,12 @@ func initTransferHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusAccepted)
 }
 
+func checkNewTransfers(w http.ResponseWriter, r *http.Request) {
+	go initIncomingTransfers()
+	go finalizeCompletedTransfers()
+	w.WriteHeader(http.StatusOK)
+}
+
 func initIncomingTransfers() {
 	log.Println("init incoming transfers")
 	//TODO
@@ -127,19 +133,18 @@ func main() {
 	go setConfigs()
 
 	isDevMode := len(os.Args) > 1 && os.Args[1] == "devMode"
-
 	if isDevMode {
 		http.HandleFunc("/inittransfer", initTransferHandler)
-
-		address := helper.GetAddress(service, "3000")
-		log.Printf("gateway listening on address %s", address)
-		if err := http.ListenAndServe(address, nil); err != nil {
-			panic(err)
-		}
-	} else {
-		finalizeCompletedTransfers()
-		initIncomingTransfers()
 	}
+
+	http.HandleFunc("/checknewtransfers", checkNewTransfers)
+
+	address := helper.GetAddress(service, "3000")
+	log.Printf("gateway listening on address %s", address)
+	if err := http.ListenAndServe(address, nil); err != nil {
+		panic(err)
+	}
+
 }
 
 func setConfigs() {
