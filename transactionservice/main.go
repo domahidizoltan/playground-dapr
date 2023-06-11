@@ -12,7 +12,6 @@ import (
 	"github.com/domahidizoltan/playground-dapr/common/client"
 	"github.com/domahidizoltan/playground-dapr/common/dto"
 	"github.com/domahidizoltan/playground-dapr/common/helper"
-	"github.com/domahidizoltan/playground-dapr/common/model"
 	"github.com/domahidizoltan/playground-dapr/transactionservice/ent"
 	entGen "github.com/domahidizoltan/playground-dapr/transactionservice/ent/generated"
 	"github.com/google/uuid"
@@ -25,6 +24,7 @@ type appModeType string
 const (
 	creditAppModeType appModeType = "credit"
 	debitAppModeType  appModeType = "debit"
+	bankAccount                   = "BANK"
 )
 
 var (
@@ -149,9 +149,9 @@ func doTransaction(ctx context.Context, transfer dto.TransferCommand) error {
 	src := transfer.SrcAcc
 	switch transfer.Command {
 	case dto.DebitSourceCommandType:
-		dest = model.BankAccount
+		dest = bankAccount
 	case dto.CreditDestCommandType:
-		src = model.BankAccount
+		src = bankAccount
 	}
 
 	newTransaction, err := entClient.Transaction.Create().

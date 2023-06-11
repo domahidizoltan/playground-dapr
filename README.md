@@ -16,8 +16,6 @@ Plan:
 
 ```mermaid
 flowchart TB
-    classDef blue stroke:blue;
-
     inputfile["inputfile\nnew transactions"]
     outputfile["outputfile\ncopleted transactions"]
     debitTnx["debitTnx\ndebit source"]
@@ -26,28 +24,22 @@ flowchart TB
     start --> inputfile
     inputfile --> gateway
     gateway -.->|lock amount and init transfer\ntopic.balance| balance
-    balance -->|"PENDING[1]"| statestore
-    linkStyle 2 stroke:blue,fill:blue;
-    linkStyle 3 stroke:blue;
+    linkStyle 2 stroke:blue;
 
     balance -.->|topic.debit_transaction| debitTnx
     debitTnx -.->|topic.balance| balance
+    linkStyle 3 stroke:orange;
     linkStyle 4 stroke:orange;
-    linkStyle 5 stroke:orange;
 
     balance -.->|topic.credit_transaction| creditTnx
     creditTnx -.->|topic.balance| balance
-    balance -->|"COMPLETED[4]"| statestore
+    linkStyle 5 stroke:green;
     linkStyle 6 stroke:green;
-    linkStyle 7 stroke:green;
-    linkStyle 8 stroke:green;
 
-    statestore --> gateway
     gateway --> outputfile
     outputfile --> X[end]
-    linkStyle 9 stroke:red
-    linkStyle 10 stroke:red
-    linkStyle 11 stroke:red
+    linkStyle 7 stroke:red
+    linkStyle 8 stroke:red
 ```
 
 

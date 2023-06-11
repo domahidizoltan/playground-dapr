@@ -8,7 +8,6 @@ import (
 
 	"github.com/domahidizoltan/playground-dapr/balanceservice/ent"
 	entGen "github.com/domahidizoltan/playground-dapr/balanceservice/ent/generated"
-	"github.com/domahidizoltan/playground-dapr/common/model"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -42,7 +41,7 @@ func createAccounts(c *entGen.BalanceClient, ctx context.Context) {
 	const balanceCount = 1000
 	errorCount := 0
 	for i := range [balanceCount]struct{}{} {
-		id := fmt.Sprintf("%s%03d", model.AccPrefix, i)
+		id := fmt.Sprintf("%s%03d", "ACC", i)
 		_, err := c.Create().
 			SetID(id).
 			SetBalance(defaultBalance).

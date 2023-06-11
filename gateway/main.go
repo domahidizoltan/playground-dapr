@@ -5,7 +5,6 @@ import (
 	"encoding/csv"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -19,7 +18,6 @@ import (
 	"github.com/domahidizoltan/playground-dapr/common/client"
 	"github.com/domahidizoltan/playground-dapr/common/dto"
 	"github.com/domahidizoltan/playground-dapr/common/helper"
-	"github.com/domahidizoltan/playground-dapr/common/model"
 	"github.com/oklog/ulid/v2"
 )
 
@@ -71,7 +69,7 @@ func validateParams(srcAcc, dstAcc string, amount float64) error {
 }
 
 func isValidAccount(acc string) bool {
-	isMatch, err := regexp.MatchString(model.AccPattern, acc)
+	isMatch, err := regexp.MatchString("ACC[0-9]{3}", acc)
 	if err != nil {
 		log.Printf("failed to validate account: %s", err)
 		return false
@@ -170,10 +168,6 @@ func processScheduledTransfers() {
 				log.Printf("failed to parse index for %s %s: %s", lastScheduledTransferIndexKey, cfg[1], err.Error())
 			}
 		}
-	}
-
-	if _, err := file.Seek(int64(1+lastScheduledTransferIndex), io.SeekStart); err != nil {
-		log.Printf("failed to seek file %s to index %d: %s", path, 1+lastScheduledTransferIndex, err.Error())
 	}
 
 	reader := csv.NewReader(file)
